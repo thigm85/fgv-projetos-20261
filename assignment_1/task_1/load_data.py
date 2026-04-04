@@ -23,7 +23,7 @@ def execute_sql_file(filename, connection):
 
     cursor.execute("SET FOREIGN_KEY_CHECKS=0;")
 
-    # Split on semicolons that are NOT inside single-quoted strings
+    # Splitei por ; porque o multi=true não estava funcionando
     statements = []
     current = []
     in_string = False
@@ -50,7 +50,7 @@ def execute_sql_file(filename, connection):
         else:
             current.append(char)
 
-    # Catch any trailing statement without a final semicolon
+    # Pegando a linha final
     stmt = ''.join(current).strip()
     if stmt:
         statements.append(stmt)
@@ -82,7 +82,7 @@ if __name__ == "__main__":
                 user=DB_USER,
                 password=DB_PASSWORD,
                 database=DB_NAME,
-                use_pure=True  # 👈 ESSENCIAL
+                use_pure=True
             )
 
             execute_sql_file(SQL_FILE, conn)
