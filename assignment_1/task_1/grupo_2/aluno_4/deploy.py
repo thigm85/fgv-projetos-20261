@@ -173,6 +173,53 @@ def run_sql_file(endpoint, filename):
     except Exception as e:
         print(f"Erro ao interagir com o banco: {e}")
 
+def verify_database(endpoint):
+    """
+        Verifica as tabelas criadas e a quantidade de registros em cada uma.
+    """
+    try:
+        # conecta ao banco de dados
+        conn = pymysql.connect(
+            host=endpoint, 
+            database=DB_NAME, 
+            user=DB_USER, 
+            password=DB_PASSWORD,
+            port=DB_PORT
+        )
+        cursor = conn.cursor()
+        
+        # busca o nome de todas as tabelas no banco atual
+        cursor.execute("SHOW TABLES")
+        tables = cursor.fetchall()
+
+        if not tables:
+            print("Nenhuma tabela encontrada no banco de dados.")
+            return
+
+        # imprime um cabeçalho bonito
+        print(f"\n{'NOME DA TABELA':<25} | {'QTD REGISTROS'}")
+        print("-" * 45)
+
+        total_geral = 0
+        
+        # itera sobre cada tabela encontrada e conta os registros
+        for (table_name,) in tables:
+            cursor.execute(f"SELECT COUNT(*) FROM `{table_name}`")
+            count = cursor.fetchone()[0]
+            total_geral += count
+            
+            # imprime o resultado formatado
+            print(f"{table_name:<25} | {count}")
+
+        print("-" * 45)
+        print(f"{'TOTAL DE REGISTROS':<25} | {total_geral}\n")
+
+        cursor.close()
+        conn.close()
+        
+    except Exception as e:
+        print(f"Erro ao verificar o banco de dados: {e}")
+
 # funções de destruição
 
 def destroy_rds_instance():
@@ -257,5 +304,20 @@ if __name__ == "__main__":
     end_time = time.time()
     print(f"Tempo de execução: {end_time - start_time:.2f} segundos.")
 
+    print("\n5. Consultando o banco de dados.")
+    start_time = time.time()
+    verify_database(endpoint)
+    end_time = time.time()
+    print(f"Tempo de execução: {end_time - start_time:.2f} segundos.")
+
+    # print("\n6. Destruindo o RDS.")
+    # start_time = time.time()
     # destroy_rds_instance()
+    # end_time = time.time()
+    # print(f"Tempo de execução: {end_time - start_time:.2f} segundos.")
+
+    # print("\n7. Destruindo o Security Group.")
+    # start_time = time.time()
     # destroy_security_group()
+    # end_time = time.time()
+    # print(f"Tempo de execução: {end_time - start_time:.2f} segundos.")
