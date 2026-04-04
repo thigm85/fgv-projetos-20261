@@ -1,0 +1,4 @@
+# Para remover credenciais
+.aws/ 
+__pycache__/
+*.venv
