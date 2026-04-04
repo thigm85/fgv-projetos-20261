@@ -3,7 +3,7 @@ import json
 import time
 
 # Carregando as configurações do banco de dados
-with open("config/db_config.json", "r") as f:
+with open("config/db_credentials.json", "r") as f:
     db_config = json.load(f)
 
 DB_INSTANCE_ID = db_config["db_instance_id"]
