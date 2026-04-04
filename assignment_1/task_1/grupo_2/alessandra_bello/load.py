@@ -31,7 +31,7 @@ def load_env(filepath: str = "rds_connection.env") -> dict:
         "port":     int(env.get("RDS_PORT", os.environ.get("RDS_PORT",     "3306"))),
         "db":       env.get("RDS_DB",       os.environ.get("RDS_DB",       "classicmodels")),
         "user":     env.get("RDS_USER",     os.environ.get("RDS_USER",     "admin")),
-        "password": env.get("RDS_PASSWORD", os.environ.get("RDS_PASSWORD", "Ale1234#")),
+        "password": env.get("RDS_PASSWORD", os.environ.get("RDS_PASSWORD", "")),
     }
 
 def get_connection(cfg: dict, db: str | None = None) -> pymysql.Connection:

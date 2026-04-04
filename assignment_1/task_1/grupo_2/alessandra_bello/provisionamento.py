@@ -10,7 +10,7 @@ CONFIG = {
     "db_instance_id":   "classicmodels-db",
     "db_name":          "classicmodels",
     "db_user":          "admin",
-    "db_password":      "Ale1234#",
+    "db_password":      "",
     "db_class":         "db.t3.micro",
     "db_engine":        "mysql",
     "db_engine_version":"8.0",
