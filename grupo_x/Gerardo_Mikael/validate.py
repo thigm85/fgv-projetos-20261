@@ -23,8 +23,29 @@ total = cursor.fetchone()[0]
 
 if total == 0:
     erros.append("Tabela customers está vazia")
+
+# Pagamentos negativos
+cursor.execute("SELECT COUNT(*) FROM payments WHERE amount < 0;")
+negativos = cursor.fetchone()[0]
+
+if negativos > 0:
+    erros.append(f"{negativos} pagamentos negativos encontrados")
+
+
+# Pedidos com cliente inválido
+
+cursor.execute("""
+SELECT COUNT(*)
+FROM orders o
+LEFT JOIN customers c ON o.customerNumber = c.customerNumber
+WHERE c.customerNumber IS NULL;
+""")
+invalidos = cursor.fetchone()[0]
+
+if invalidos > 0:
+    erros.append(f"{invalidos} pedidos com cliente inválido")
     
-# Resultado final
+# Resultado
 
 cursor.close()
 conn.close()
