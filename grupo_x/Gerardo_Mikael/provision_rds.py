@@ -1,13 +1,17 @@
 import boto3
 import time
+import os
+from dotenv import load_dotenv
 
-# Configurações básicas
-DB_INSTANCE_ID = "meu-db"
-DB_NAME = "classicmodels"
-DB_USER = "admin"
-DB_PASSWORD = "Senha1234!"
-DB_CLASS = "db.t3.micro"
-ENGINE = "mysql"
+load_dotenv()
+
+# Config
+DB_INSTANCE_ID = os.getenv('DB_INSTANCE_ID')
+DB_USER = os.getenv('DB_USER')
+DB_PASSWORD = os.getenv('DB_PASSWORD')
+DB_NAME = os.getenv('DB_NAME')
+DB_CLASS = os.getenv('DB_CLASS')
+ENGINE = os.getenv('ENGINE')
 
 rds = boto3.client("rds")
 
@@ -36,7 +40,7 @@ def create_db():
 
 
 def wait_for_db():
-    print("Esperando RDS ficar disponível...")
+    print("Esperando RDS...")
 
     while True:
         response = rds.describe_db_instances(DBInstanceIdentifier=DB_INSTANCE_ID)
