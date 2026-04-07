@@ -23,12 +23,32 @@ Fluxo pedido em [rds.md](../../rds.md): provisionar MySQL no Amazon RDS, carrega
 - Credenciais AWS com permissões **RDS** e **EC2** (criar/listar/apagar instância RDS e security groups)
 - `pip install -r requirements.txt`
 
+## Credenciais AWS
+
+Antes de executar os scripts, configure suas credenciais AWS localmente.
+
+Crie ou edite o seguinte arquivo na raiz da sua máquina:
+
+`~/.aws/credentials`
+
+Com o conteúdo:
+
+```ini
+[default]
+aws_access_key_id=YOUR_ACCESS_KEY
+aws_secret_access_key=YOUR_SECRET_KEY
+aws_session_token=YOUR_SESSION_TOKEN
+```
+
+Esses valores podem ser obtidos ao inicializar o laboratório, na aba AWS Details (AWS CLI).
+
 ## Configuração
 
 1. Copie `.env.example` para `.env` e defina pelo menos `RDS_MASTER_PASSWORD`;
 2. Após o passo 1 de provisionamento, `connection.local.env` é criado na mesma pasta com `DB_HOST` / `RDS_ENDPOINT`. Esse ficheiro está no `.gitignore`.
 
 O dump SQL por omissão resolve para `assignment_1/task_1/data/mysqlsampledatabase.sql`. Pode sobrepor com `SQL_FILE_PATH`.
+
 
 ## Execução (ordem)
 
