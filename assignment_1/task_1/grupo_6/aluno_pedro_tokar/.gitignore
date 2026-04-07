@@ -1,3 +1,4 @@
 terraform_config/.terraform/*
 terraform_config/.terraform*
 terraform_config/global-bundle.pem
+global-bundle.pem
