@@ -5,7 +5,7 @@ Este projeto implementa o Task 1 do laboratorio: criar o sistema de origem em My
 ## Estrutura
 
 ```text
-aluno_paula/
+final/
 |- terraform/
 |  |- main.tf
 |  |- variables.tf
@@ -95,8 +95,8 @@ Defina variaveis de ambiente (use os valores do `terraform output`):
 ```powershell
 $env:AWS_REGION="us-east-1"
 $env:DB_INSTANCE_IDENTIFIER="classicmodels-db"
-$env:DB_HOST="classicmodels-db.czgogsk8eoie.us-east-1.rds.amazonaws.com"
-$env:DB_USER="paula_admin"
+$env:DB_HOST="classicmodels-db.lpokoj.us-east-1.rds.amazonaws.com"
+$env:DB_USER="admin"
 $env:DB_PASSWORD="<sua-senha>"
 ```
 

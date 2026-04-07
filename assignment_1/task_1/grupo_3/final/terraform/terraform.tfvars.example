@@ -1,0 +1,8 @@
+region                 = "us-east-1"
+db_instance_identifier = "classicmodels-db"
+db_name                = "classicmodels"
+db_username            = "admin"
+db_password            = "TroqueEstaSenhaForte123!"
+instance_class         = "db.t3.micro"
+allowed_cidr           = "0.0.0.0/0"
+publicly_accessible    = true
