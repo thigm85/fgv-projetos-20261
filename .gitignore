@@ -1,0 +1,5 @@
+.aws/
+.env
+assignment_1\task_1\grupo_3\aluno_paula\terraform\outputs.tf
+*.tfstate
+*.tfvars
