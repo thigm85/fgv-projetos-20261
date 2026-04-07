@@ -7,6 +7,17 @@ DB_ID = "task1-mysql"
 USERNAME = "mariana"
 PASSWORD = "password123"
 
+EXPECTED_TABLES = [
+    "customers",
+    "employees",
+    "offices",
+    "orderdetails",
+    "orders",
+    "payments",
+    "productlines",
+    "products",
+]
+
 ec2 = boto3.client("ec2", region_name=REGION)
 rds = boto3.client("rds", region_name=REGION)
 
@@ -113,47 +124,42 @@ with open(SQL_FILE, "r", encoding="utf-8") as f:
             for i, stmt in enumerate(commands, start=1):
                 cursor.execute(stmt)
                 print(f"[OK] Comando {i}/{len(commands)}")
+
+            print("\nIniciando validacao das tabelas...")
+
+            cursor.execute("USE classicmodels;")
+            cursor.execute("SHOW TABLES;")
+            created_tables = {row[0] for row in cursor.fetchall()}
+
+            missing_tables = sorted(set(EXPECTED_TABLES) - created_tables)
+            unexpected_tables = sorted(created_tables - set(EXPECTED_TABLES))
+
+            if missing_tables:
+                raise RuntimeError(
+                    f"Tabelas ausentes apos a carga: {', '.join(missing_tables)}"
+                )
+
+            if unexpected_tables:
+                print(
+                    "Tabelas adicionais encontradas:",
+                    ", ".join(unexpected_tables)
+                )
+
+            empty_tables = []
+            for table in EXPECTED_TABLES:
+                cursor.execute(f"SELECT COUNT(*) FROM `{table}`;")
+                row_count = cursor.fetchone()[0]
+                print(f"[VALIDACAO] Tabela `{table}` com {row_count} registros.")
+                if row_count == 0:
+                    empty_tables.append(table)
+
+            if empty_tables:
+                raise RuntimeError(
+                    f"Tabelas criadas, mas vazias: {', '.join(empty_tables)}"
+                )
+
+            print("Validacao concluida com sucesso: todas as tabelas foram criadas e populadas.")
     finally:
         conn.close()
 
     print("Carga concluída.")
-
-
-# drop das instancias criadas
-# DB_ID = "task1-mysql"
-# SG_NAME = "task1-security"
-
-# # 1. deletar RDS
-# try:
-#     rds.delete_db_instance(
-#         DBInstanceIdentifier=DB_ID,
-#         SkipFinalSnapshot=True,   # importante pra não travar
-#         DeleteAutomatedBackups=True
-#     )
-#     print("Deletando RDS...")
-# except Exception as e:
-#     print("Erro ao deletar RDS:", e)
-
-# # 2. esperar apagar
-# try:
-#     waiter = rds.get_waiter("db_instance_deleted")
-#     waiter.wait(DBInstanceIdentifier=DB_ID)
-#     print("RDS deletado")
-# except Exception as e:
-#     print("Erro esperando deleção:", e)
-
-# # 3. achar SG pelo nome
-# response = ec2.describe_security_groups(
-#     Filters=[{"Name": "group-name", "Values": [SG_NAME]}]
-# )
-
-# if response["SecurityGroups"]:
-#     sg_id = response["SecurityGroups"][0]["GroupId"]
-
-#     try:
-#         ec2.delete_security_group(GroupId=sg_id)
-#         print("SG deletado:", sg_id)
-#     except Exception as e:
-#         print("Erro ao deletar SG:", e)
-# else:
-#     print("SG não encontrado")
