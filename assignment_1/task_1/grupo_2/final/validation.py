@@ -70,7 +70,14 @@ FK_CHECKS = [
     ),
 ]
 
-def load_env(filepath: str = "rds_connection.env") -> dict:
+def load_env(filename: str = "rds_connection.env") -> dict:
+    # Define o diretório base do script (grupo_2/final/)
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    # Define a raiz do projeto (subindo dois níveis)
+    PROJECT_ROOT = os.path.dirname(os.path.dirname(BASE_DIR))
+    # Procura o .env na raiz do projeto
+    filepath = os.path.join(PROJECT_ROOT, filename)
+
     env = {}
     if os.path.isfile(filepath):
         with open(filepath) as f:

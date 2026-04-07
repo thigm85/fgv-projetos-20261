@@ -5,7 +5,14 @@ import os
 
 ### Carregando as configurações
 
-def load_env(filepath: str = "rds_connection.env") -> dict:
+# Define o diretório base do script (grupo_2/final/)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Define a raiz do projeto (subindo dois níveis)
+PROJECT_ROOT = os.path.dirname(os.path.dirname(BASE_DIR))
+
+def load_env(filename: str = "rds_connection.env") -> dict:
+    # Procura o .env na raiz do projeto
+    filepath = os.path.join(PROJECT_ROOT, filename)
     env = {}
     if os.path.isfile(filepath):
         with open(filepath) as f:
@@ -18,9 +25,8 @@ def load_env(filepath: str = "rds_connection.env") -> dict:
 
 cfg = load_env()
 
-
-# Caminho do arquivo SQL
-SQL_FILE_PATH = "../../data/mysqlsampledatabase.sql"
+# Caminho do arquivo SQL (sempre na pasta data na raiz do projeto)
+SQL_FILE_PATH = os.path.join(PROJECT_ROOT, "data", "mysqlsampledatabase.sql")
 
 def load_data():
     print(f"Conectando ao banco em {cfg.get('RDS_HOST')}...")
