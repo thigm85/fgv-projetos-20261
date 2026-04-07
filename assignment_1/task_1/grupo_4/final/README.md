@@ -10,10 +10,10 @@ Fluxo pedido em [rds.md](../../rds.md): provisionar MySQL no Amazon RDS, carrega
 | [classicmodels_rds/config.py](classicmodels_rds/config.py)                   | Variáveis de ambiente; caminho padrão do SQL em `task_1/data/`; grava/lê `connection.local.env` |
 | [classicmodels_rds/aws_provision.py](classicmodels_rds/aws_provision.py)     | Security group (3306), `create_db_instance`, espera `available`, teardown opcional              |
 | [classicmodels_rds/mysql_io.py](classicmodels_rds/mysql_io.py)               | Conexão com retentativas; carga via `cmd_query_iter`; validação das 8 tabelas                   |
-| [scripts/01_provision_rds.py](scripts/01_provision_rds.py)                   | Cria SG + instância RDS e grava o endpoint em `connection.local.env`                            |
-| [scripts/02_load_classicmodels.py](scripts/02_load_classicmodels.py)         | Executa o arquivo SQL completo no RDS                                                           |
-| [scripts/03_validate_classicmodels.py](scripts/03_validate_classicmodels.py) | Confere tabelas e contagens (exit code 1 se falhar)                                             |
-| [scripts/04_destroy_rds.py](scripts/04_destroy_rds.py)                       | Remove a instância e o SG do laboratório (opcional)                                             |
+| [scripts/a_provision_rds.py](scripts/a_provision_rds.py)                   | Cria SG + instância RDS e grava o endpoint em `connection.local.env`                            |
+| [scripts/b_load_classicmodels.py](scripts/b_load_classicmodels.py)         | Executa o arquivo SQL completo no RDS                                                           |
+| [scripts/c_validate_classicmodels.py](scripts/c_validate_classicmodels.py) | Confere tabelas e contagens (exit code 1 se falhar)                                             |
+| [scripts/d_destroy_rds.py](scripts/d_destroy_rds.py)                       | Remove a instância e o SG do laboratório (opcional)                                             |
 | [main.py](main.py)                                                           | Execução completa (provisionamento, carga, validação, opcional teardown)                        |
 
 
@@ -34,15 +34,15 @@ O dump SQL por omissão resolve para `assignment_1/task_1/data/mysqlsampledataba
 
 ```bash
 cd grupo_4/aluno_luciano
-python scripts/01_provision_rds.py
-python scripts/02_load_classicmodels.py
-python scripts/03_validate_classicmodels.py
+python scripts/a_provision_rds.py
+python scripts/b_load_classicmodels.py
+python scripts/c_validate_classicmodels.py
 ```
 
 Teardown opcional:
 
 ```bash
-python scripts/04_destroy_rds.py
+python scripts/d_destroy_rds.py
 ```
 
 O arquivo `main.py` executa todos os scripts em ordem.
