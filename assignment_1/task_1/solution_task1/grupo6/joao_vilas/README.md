@@ -90,3 +90,13 @@ python validate_data.py
 | payments      | 273    |
 | productlines  | 7      |
 | products      | 110    |
+
+## Destruir o RDS
+
+```bash
+cd assignment_1\task_1\solution_task1\grupo6\joao_vilas\terraform
+```
+
+```bash
+terraform destroy
+```
