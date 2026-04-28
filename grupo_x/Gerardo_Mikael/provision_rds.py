@@ -3,19 +3,18 @@ import time
 import os
 from dotenv import load_dotenv
 
-rds = boto3.client("rds", region_name="us-east-1")
-print(rds.describe_db_instances())
-
-'''
 load_dotenv()
 
 # Config
-DB_INSTANCE_ID = os.getenv('DB_INSTANCE_ID')
-DB_USER = os.getenv('DB_USER')
-DB_PASSWORD = os.getenv('DB_PASSWORD')
-DB_NAME = os.getenv('DB_NAME')
-DB_CLASS = os.getenv('DB_CLASS')
-ENGINE = os.getenv('ENGINE')
+DB_INSTANCE_ID = os.getenv('DB_INSTANCE_ID') or "meu-db"
+DB_USER = os.getenv('DB_USER') or "admin"
+DB_PASSWORD = os.getenv('DB_PASSWORD') or "Senha1234!"
+DB_NAME = os.getenv('DB_NAME') or "classicmodels"
+DB_CLASS = os.getenv('DB_CLASS') or "db.t3.micro"
+ENGINE = os.getenv('ENGINE') or "mysql"
+
+if not all([DB_INSTANCE_ID, DB_USER, DB_PASSWORD, DB_NAME, DB_CLASS, ENGINE]):
+    raise ValueError("Configuração incompleta")
 
 rds = boto3.client("rds")
 
@@ -70,4 +69,4 @@ def get_endpoint():
 if __name__ == "__main__":
     if create_db():
         wait_for_db()
-        get_endpoint()'''
+        get_endpoint()
