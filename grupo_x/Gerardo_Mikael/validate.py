@@ -5,7 +5,7 @@ import mysql.connector
 load_dotenv()
 
 conn = mysql.connector.connect(
-    host=os.getenv("DB_HOST"),
+    host=os.getenv("DB_INSTANCE_ID"),
     user=os.getenv("DB_USER"),
     password=os.getenv("DB_PASSWORD"),
     database=os.getenv("DB_NAME")

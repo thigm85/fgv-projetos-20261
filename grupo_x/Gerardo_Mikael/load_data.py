@@ -4,7 +4,7 @@ import mysql.connector
 
 load_dotenv()
 
-DB_HOST = os.getenv('DB_HOST')
+DB_INSTANCE_ID = os.getenv('DB_INSTANCE_ID')
 DB_USER = os.getenv('DB_USER')
 DB_PASSWORD = os.getenv('DB_PASSWORD')
 DB_NAME = os.getenv('DB_NAME')
@@ -18,7 +18,7 @@ SQL_FILE_PATH = Path(__file__).resolve().parent.parent.parent / "assignment_1" /
 def load_data():
     try:
         connection = mysql.connector.connect(
-            host=DB_HOST,
+            host=DB_INSTANCE_ID,
             user=DB_USER,
             password=DB_PASSWORD
         )
