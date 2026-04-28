@@ -3,6 +3,10 @@ import time
 import os
 from dotenv import load_dotenv
 
+rds = boto3.client("rds", region_name="us-east-1")
+print(rds.describe_db_instances())
+
+'''
 load_dotenv()
 
 # Config
@@ -66,4 +70,4 @@ def get_endpoint():
 if __name__ == "__main__":
     if create_db():
         wait_for_db()
-        get_endpoint()
+        get_endpoint()'''
