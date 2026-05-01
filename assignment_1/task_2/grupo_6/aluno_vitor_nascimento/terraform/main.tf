@@ -14,20 +14,25 @@ variable "db_username" {
   sensitive   = true
 }
 
+data "http" "my_ip" {
+  url = "https://checkip.amazonaws.com/"
+}
+
 data "aws_vpc" "default" {
   default = true
 }
 
 resource "aws_security_group" "rds_sg" {
-  name        = "rds_mysql_sg"
-  description = "Permitir trafego MySQL local"
+  name_prefix = "rds-sg-task2-"
+  description = "Permitir trafego MySQL apenas para IP atual"
   vpc_id      = data.aws_vpc.default.id
 
   ingress {
     from_port   = 3306
     to_port     = 3306
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["${chomp(data.http.my_ip.response_body)}/32"]
+    description = "Acesso restrito ao IP do desenvolvedor"
   }
 
   egress {
@@ -36,6 +41,10 @@ resource "aws_security_group" "rds_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_db_instance" "mysql_task" {
@@ -43,7 +52,6 @@ resource "aws_db_instance" "mysql_task" {
   engine                 = "mysql"
   engine_version         = "8.0"
   instance_class         = "db.t3.micro"
-  identifier             = "projetos-db"
   username               = var.db_username
   password               = var.db_password
   parameter_group_name   = "default.mysql8.0"
@@ -52,6 +60,23 @@ resource "aws_db_instance" "mysql_task" {
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
 }
 
+resource "aws_s3_bucket" "datalake" {
+  bucket_prefix = "fgv-datalake-vitor-"
+  force_destroy = true
+}
+
+data "aws_iam_role" "lab_role" {
+  name = "LabRole"
+}
+
 output "rds_endpoint" {
   value = aws_db_instance.mysql_task.endpoint
+}
+
+output "s3_bucket" {
+  value = aws_s3_bucket.datalake.id
+}
+
+output "glue_role_arn" {
+  value = data.aws_iam_role.lab_role.arn
 }
