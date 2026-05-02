@@ -1,0 +1,10 @@
+aws_region   = "us-east-1"
+db_identifier = "classicmodels-db"
+db_username   = "admin"
+db_password   = "SENHA"
+
+# Opcional: restrinja ao IP público, ex.: ["203.0.113.10/32"]
+# allowed_cidr_blocks = ["0.0.0.0/0"]
+
+# Opcional: IDs de outros security groups que devem acessar o MySQL.
+# allowed_security_group_ids = ["sg-xxxxxxxx"]
