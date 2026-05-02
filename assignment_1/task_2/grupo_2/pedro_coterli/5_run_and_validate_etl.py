@@ -1,16 +1,50 @@
+import time
+import boto3
 import awswrangler as wr
 import pandas as pd
-import boto3
 
-# Configuração
+# Configurações
+JOB_NAME = "classicmodels_star_schema_etl"
+REGION = "us-east-1"
 BUCKET_NAME = "classicmodels-datalake-pedro-coterli"
 BASE_PATH = f"s3://{BUCKET_NAME}/output"
 
-def validate_etl():
-    print("Iniciando a validação final do ETL...")
+def run_and_wait_glue_job():
+    print(f"Iniciando o Job do Glue: '{JOB_NAME}'...")
 
-    # Verificando se o job finaliza com status SUCCEEDED
-    print("Status SUCCEEDED verificado na execução via AWS CLI.\n")
+    # Criando o cliente do Glue
+    glue_client = boto3.client("glue", region_name = REGION)
+
+    # Disparando o Job
+    response = glue_client.start_job_run(JobName = JOB_NAME)
+    job_run_id = response["JobRunId"]
+
+    print(f"Job disparado com sucesso. (Run ID: {job_run_id})")
+    print("Aguardando a execução...")
+
+    # Loop de repetição para checar o status
+    while True:
+        status_response = glue_client.get_job_run(JobName = JOB_NAME, RunId = job_run_id)
+        status = status_response["JobRun"]["JobRunState"]
+
+        print(f" -> Status atual: {status}...")
+
+        if status == "SUCCEEDED":
+            print("\nO Job finalizou com sucesso. Avançando para a validação...\n")
+            break
+        elif status in ["FAILED", "STOPPED", "TIMEOUT"]:
+            error_msg = status_response["JobRun"].get("ErrorMessage", "Erro desconhecido.")
+            print(f"\nO Job falhou com status {status}. Mensagem de erro: {error_msg}")
+            # Interrompe o script se der erro
+            raise SystemExit("Pipeline abortado devido a erro no Glue.")
+        
+        # Espera 20 segundos antes de perguntar para a AWS de novo
+        time.sleep(20)
+
+def validate_etl():
+    print("-"*50)
+    print("Iniciando a validação final do ETL...")
+    print("-"*50)
 
     # Verificando se as saídas Parquet de fact_orders e das dimensões existem
     print("--- Verificando a existência dos arquivos Parquet no S3 ---")
@@ -87,4 +121,7 @@ def validate_etl():
     print("\nVALIDAÇÃO DO PIPELINE ETL CONCLUÍDA.")
 
 if __name__ == "__main__":
+    # Executa e aguarda
+    run_and_wait_glue_job()
+    # Depois que termina, roda a validação
     validate_etl()
