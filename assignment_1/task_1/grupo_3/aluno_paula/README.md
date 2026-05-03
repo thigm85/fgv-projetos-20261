@@ -5,7 +5,7 @@ Este projeto implementa o Task 1 do laboratorio: criar o sistema de origem em My
 ## Estrutura
 
 ```text
-aluno_paula/
+aluno_x/
 |- terraform/
 |  |- main.tf
 |  |- variables.tf
@@ -39,7 +39,7 @@ Expand-Archive -Path "$env:TEMP\terraform.zip" -DestinationPath "$env:USERPROFIL
 No PowerShell, partindo da raiz do repositorio:
 
 ```powershell
-cd assignment_1\task_1\grupo_3\aluno_paula\terraform
+cd assignment_1\task_1\grupo_3\aluno_x\terraform
 Copy-Item terraform.tfvars.example terraform.tfvars
 ```
 
@@ -60,6 +60,17 @@ Obter valores para os scripts:
 & "$env:USERPROFILE\bin\terraform.exe" output
 ```
 
+Opcional: salvar outputs em JSON:
+
+```powershell
+& "$env:USERPROFILE\bin\terraform.exe" output -json > .\outputs.json
+```
+
+Importante:
+- Esse comando gera/atualiza o arquivo automaticamente naquele momento.
+- O arquivo nao se atualiza sozinho depois; rode novamente apos cada `terraform apply`.
+- Os scripts atuais usam `DB_HOST`, `DB_USER` e `DB_PASSWORD` por variavel de ambiente (nao leem `outputs.json` automaticamente).
+
 ## Como validar no console AWS (etapa 1)
 
 No Console AWS, regiao `us-east-1`:
@@ -79,7 +90,7 @@ No Console AWS, regiao `us-east-1`:
 
 ## 2) Preparar ambiente Python
 
-Volte para a pasta `aluno_paula`:
+Volte para a pasta `aluno_x`:
 
 ```powershell
 cd ..
@@ -96,11 +107,37 @@ Defina variaveis de ambiente (use os valores do `terraform output`):
 $env:AWS_REGION="us-east-1"
 $env:DB_INSTANCE_IDENTIFIER="classicmodels-db"
 $env:DB_HOST="classicmodels-db.czgogsk8eoie.us-east-1.rds.amazonaws.com"
-$env:DB_USER="paula_admin"
+$env:DB_USER="admin"
 $env:DB_PASSWORD="<sua-senha>"
 ```
 
 Importante: em `DB_HOST`, nao colocar `:3306`.
+
+### Como definir `DB_HOST` (passo a passo)
+
+1. Na pasta `terraform`, rode:
+
+```powershell
+& "$env:USERPROFILE\bin\terraform.exe" output
+```
+
+2. Copie o valor de `rds_endpoint`, por exemplo:
+   - `classicmodels-db.czgogsk8eoie.us-east-1.rds.amazonaws.com:3306`
+
+3. Para `DB_HOST`, use somente o host (sem `:3306`):
+   - `classicmodels-db.czgogsk8eoie.us-east-1.rds.amazonaws.com`
+
+4. Na pasta `aluno_x`, defina no PowerShell:
+
+```powershell
+$env:DB_HOST="classicmodels-db.czgogsk8eoie.us-east-1.rds.amazonaws.com"
+```
+
+5. Verifique:
+
+```powershell
+echo $env:DB_HOST
+```
 
 Execute:
 
