@@ -54,3 +54,39 @@ variable "publicly_accessible" {
   type        = bool
   default     = true
 }
+
+variable "etl_bucket_name" {
+  description = "S3 bucket name for ETL outputs and Glue script."
+  type        = string
+  default     = ""
+}
+
+variable "glue_job_name" {
+  description = "Glue ETL job name."
+  type        = string
+  default     = "classicmodels-etl-star-schema"
+}
+
+variable "glue_connection_name" {
+  description = "Glue JDBC connection name."
+  type        = string
+  default     = "classicmodels-rds-connection"
+}
+
+variable "glue_workers" {
+  description = "Number of workers for Glue job."
+  type        = number
+  default     = 2
+}
+
+variable "existing_glue_role_arn" {
+  description = "Existing IAM role ARN for Glue. If provided, Terraform will not create IAM role/policies."
+  type        = string
+  default     = ""
+}
+
+variable "manage_lab_ip_ingress_rule" {
+  description = "Whether Terraform should manage the RDS ingress rule from allowed_cidr."
+  type        = bool
+  default     = false
+}

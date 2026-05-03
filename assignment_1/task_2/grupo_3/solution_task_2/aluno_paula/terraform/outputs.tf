@@ -17,3 +17,15 @@ output "db_instance_identifier" {
 output "allowed_cidr" {
   value = var.allowed_cidr
 }
+
+output "etl_bucket_name" {
+  value = aws_s3_bucket.etl.id
+}
+
+output "glue_job_name" {
+  value = aws_glue_job.classicmodels_etl.name
+}
+
+output "glue_connection_name" {
+  value = aws_glue_connection.rds_mysql.name
+}
