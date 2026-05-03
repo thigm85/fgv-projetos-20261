@@ -7,15 +7,18 @@ terraform {
     }
 }
 
-provider "aws" {
-    region = "us-east-1"
-}
-
 # Lendo as configurações
 locals {
     credentials = jsondecode(file("${path.module}/config/db_credentials.json"))
     endpoint = jsondecode(file("${path.module}/config/db_endpoint.json"))
-    bucket_name = "classicmodels-datalake-pedro-coterli"
+    etl_cfg = jsondecode(file("${path.module}/config/etl_configs.json"))
+
+    # Extraindo a variável do bucket
+    bucket_name = local.etl_cfg.bucket_name
+}
+
+provider "aws" {
+    region = local.etl_cfg.region
 }
 
 # Capturando a rede padrão do Lab
@@ -48,9 +51,9 @@ resource "aws_s3_bucket" "datalake" {
 # Fazendo o upload automático do script de ETL para o S3
 resource "aws_s3_object" "etl_script" {
     bucket = aws_s3_bucket.datalake.id
-    key = "scripts/4_etl_job.py"
-    source = "${path.module}/4_etl_job.py"
-    etag = filemd5("${path.module}/4_etl_job.py")
+    key = "scripts/etl_job.py"
+    source = "${path.module}/etl_job.py"
+    etag = filemd5("${path.module}/etl_job.py")
 }
 
 # VPC endpoint para o S3
@@ -73,6 +76,15 @@ resource "aws_security_group" "glue_sg" {
         self = true
     }
 
+    # Regra exigida pelos nós do Glue para se comunicarem
+    egress {
+        from_port = 0
+        to_port = 0
+        protocol = "-1"
+        self = true
+    }
+
+    # Saída para acessar o S3 e o RDS
     egress {
         from_port = 0
         to_port = 0
