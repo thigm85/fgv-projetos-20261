@@ -14,6 +14,6 @@ output "db_instance_identifier" {
   value = aws_db_instance.mysql.id
 }
 
-output "db_username" {
-  value = var.db_username
+output "allowed_cidr" {
+  value = var.allowed_cidr
 }

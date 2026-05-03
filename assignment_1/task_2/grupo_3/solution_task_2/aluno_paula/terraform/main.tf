@@ -79,6 +79,7 @@ resource "aws_security_group" "rds_sg" {
   vpc_id = aws_vpc.main.id
 
   ingress {
+    description = "Lab access restricted to one trusted /32 IP"
     from_port   = 3306
     to_port     = 3306
     protocol    = "tcp"
@@ -112,6 +113,7 @@ resource "aws_db_instance" "mysql" {
   db_subnet_group_name   = aws_db_subnet_group.default.name
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
   publicly_accessible    = var.publicly_accessible
+  deletion_protection    = false
 
   skip_final_snapshot = true
 

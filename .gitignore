@@ -1,5 +1,40 @@
-.aws/
+# Secrets and local environment
 .env
-assignment_1\task_1\grupo_3\aluno_paula\terraform\outputs.tf
+.env.*
+!.env.example
+.aws/
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
 *.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+terraform.tfvars
 *.tfvars
+*.tfvars.json
