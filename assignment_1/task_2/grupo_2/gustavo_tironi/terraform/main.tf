@@ -278,17 +278,6 @@ resource "aws_security_group_rule" "allow_mysql_from_glue" {
 }
 
 # ==========================
-# S3 VPC endpoint para o Glue acessar sem precisar acesso publico
-# ==========================
-
-resource "aws_vpc_endpoint" "s3" {
-  vpc_id            = data.aws_vpc.default.id
-  service_name      = "com.amazonaws.us-east-1.s3"
-  vpc_endpoint_type = "Gateway"
-  route_table_ids   = data.aws_vpc.default.main_route_table_id != null ? [data.aws_vpc.default.main_route_table_id] : []
-}
-
-# ==========================
 # Secrets Manager (DB credentials)
 # ==========================
 
