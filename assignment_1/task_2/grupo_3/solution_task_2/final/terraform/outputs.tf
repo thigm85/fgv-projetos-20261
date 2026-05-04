@@ -1,5 +1,4 @@
 output "rds_endpoint" {
-  # Endpoint do banco para scripts da Task 1 e Glue.
   value = aws_db_instance.mysql.endpoint
 }
 
@@ -20,12 +19,10 @@ output "allowed_cidr" {
 }
 
 output "etl_bucket_name" {
-  # Bucket onde ficam script, temporários e datasets curados.
   value = aws_s3_bucket.etl.id
 }
 
 output "glue_job_name" {
-  # Nome do job para start/acompanhamento via AWS CLI.
   value = aws_glue_job.classicmodels_etl.name
 }
 

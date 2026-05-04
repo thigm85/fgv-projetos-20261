@@ -2,15 +2,11 @@ provider "aws" {
   region = var.region
 }
 
-# Identidade atual usada para compor nomes únicos e políticas.
 data "aws_caller_identity" "current" {}
 
 locals {
-  # Script ETL enviado para o bucket do pipeline.
   glue_script_key = "scripts/glue_etl_star_schema.py"
-  # Nome padrão do bucket quando não informado via variável.
   etl_bucket_name = var.etl_bucket_name != "" ? var.etl_bucket_name : "classicmodels-etl-${data.aws_caller_identity.current.account_id}-${var.region}"
-  # Reusa role existente em labs restritos, ou cria uma nova quando possível.
   glue_role_arn   = var.existing_glue_role_arn != "" ? var.existing_glue_role_arn : aws_iam_role.glue_role[0].arn
 }
 
@@ -46,7 +42,6 @@ resource "aws_route_table" "public" {
 }
 
 resource "aws_vpc_endpoint" "s3_gateway" {
-  # Necessário para o Glue em VPC acessar S3 sem NAT.
   vpc_id            = aws_vpc.main.id
   service_name      = "com.amazonaws.${var.region}.s3"
   vpc_endpoint_type = "Gateway"
@@ -119,7 +114,6 @@ resource "aws_security_group" "glue_sg" {
   vpc_id = aws_vpc.main.id
 
   ingress {
-    # Exigência do Glue em VPC: tráfego interno liberado no próprio SG.
     description = "Required by Glue in VPC: allow all traffic within the same SG"
     from_port   = 0
     to_port     = 65535
@@ -140,7 +134,6 @@ resource "aws_security_group" "glue_sg" {
 }
 
 resource "aws_security_group_rule" "rds_from_glue" {
-  # Permite o Glue conectar no MySQL do RDS.
   type                     = "ingress"
   from_port                = 3306
   to_port                  = 3306
@@ -151,7 +144,6 @@ resource "aws_security_group_rule" "rds_from_glue" {
 }
 
 resource "aws_security_group_rule" "rds_from_lab_ip" {
-  # Regra opcional para acesso manual ao banco a partir do IP do laboratório.
   count             = var.manage_lab_ip_ingress_rule ? 1 : 0
   type              = "ingress"
   from_port         = 3306
@@ -187,7 +179,6 @@ resource "aws_db_instance" "mysql" {
 }
 
 resource "aws_s3_bucket" "etl" {
-  # Bucket de script, temporários e datasets curados em Parquet.
   bucket = local.etl_bucket_name
 
   tags = {
@@ -214,7 +205,6 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "etl" {
 }
 
 resource "aws_s3_object" "glue_script" {
-  # Publica o script do Glue no S3 para execução do job.
   bucket = aws_s3_bucket.etl.id
   key    = local.glue_script_key
   source = "${path.module}/../scripts/glue_etl_star_schema.py"
@@ -222,7 +212,6 @@ resource "aws_s3_object" "glue_script" {
 }
 
 resource "aws_iam_role" "glue_role" {
-  # Em alguns labs não há permissão de IAM; por isso este recurso é condicional.
   count = var.existing_glue_role_arn == "" ? 1 : 0
   name = "classicmodels-glue-role"
 
@@ -298,7 +287,6 @@ resource "aws_iam_role_policy" "glue_inline" {
 }
 
 resource "aws_glue_connection" "rds_mysql" {
-  # Conexão JDBC entre Glue e RDS dentro da VPC.
   name = var.glue_connection_name
 
   connection_properties = {
@@ -315,7 +303,6 @@ resource "aws_glue_connection" "rds_mysql" {
 }
 
 resource "aws_glue_job" "classicmodels_etl" {
-  # Job responsável por extrair, transformar (star schema) e carregar no S3.
   name              = var.glue_job_name
   role_arn          = local.glue_role_arn
   glue_version      = "4.0"
@@ -331,7 +318,6 @@ resource "aws_glue_job" "classicmodels_etl" {
   connections = [aws_glue_connection.rds_mysql.name]
 
   default_arguments = {
-    # Parâmetros consumidos pelo script glue_etl_star_schema.py
     "--job-language"                     = "python"
     "--enable-continuous-cloudwatch-log" = "true"
     "--enable-metrics"                   = "true"

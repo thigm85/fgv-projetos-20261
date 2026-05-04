@@ -4,7 +4,6 @@ from awsglue.utils import getResolvedOptions
 
 
 def build_country_territory_expr():
-    # Mapeamento simples de país para território analítico.
     return (
         F.when(F.col("country").isin("USA", "Canada", "Mexico"), F.lit("North America"))
         .when(
@@ -46,7 +45,6 @@ def main():
     )
 
     spark = SparkSession.builder.appName("classicmodels-star-schema").getOrCreate()
-    # Extração JDBC a partir do RDS MySQL.
     jdbc_url = f"jdbc:mysql://{args['rds_host']}:{args['rds_port']}/{args['db_name']}"
     jdbc_props = {
         "user": args["rds_user"],
@@ -61,7 +59,6 @@ def main():
     productlines = spark.read.jdbc(jdbc_url, "productlines", properties=jdbc_props)
 
     dim_customers = (
-        # Dimensão de clientes com padronização dos nomes de coluna exigidos.
         customers.select(
             F.col("customerNumber").cast("int").alias("customer_id"),
             F.col("customerName").alias("customer_name"),
@@ -73,7 +70,6 @@ def main():
     )
 
     dim_products = (
-        # Dimensão de produtos com atributos de linha e fornecedor.
         products.alias("p")
         .join(productlines.alias("pl"), F.col("p.productLine") == F.col("pl.productLine"), "left")
         .select(
@@ -86,7 +82,6 @@ def main():
     )
 
     dim_dates = (
-        # Dimensão de datas derivada da data do pedido.
         orders.select(F.to_date("orderDate").alias("full_date"))
         .where(F.col("full_date").isNotNull())
         .dropDuplicates(["full_date"])
@@ -99,7 +94,6 @@ def main():
     )
 
     dim_countries = (
-        # Dimensão de países com chave surrogate (country_key).
         dim_customers.select("country")
         .where(F.col("country").isNotNull())
         .dropDuplicates(["country"])
@@ -115,7 +109,6 @@ def main():
     )
 
     fact_orders = (
-        # Fato de pedidos com métricas de negócio.
         fact_orders_base.join(dim_countries.alias("dc"), F.col("c.country") == F.col("dc.country"), "left")
         .select(
             F.col("o.orderNumber").cast("int").alias("order_id"),
@@ -129,7 +122,7 @@ def main():
         .withColumn("sales_amount", (F.col("quantity_ordered") * F.col("price_each")).cast("double"))
     )
 
-    # Quality gates obrigatórios da tarefa.
+    # Quality gates required by task instructions.
     fact_count = fact_orders.count()
     if fact_count == 0:
         raise RuntimeError("Quality gate failed: fact_orders has zero rows.")
@@ -179,7 +172,6 @@ def main():
         )
 
     output_path = args["output_path"].rstrip("/")
-    # Load final em Parquet, uma pasta por entidade.
     dim_customers.write.mode("overwrite").parquet(f"{output_path}/dim_customers")
     dim_products.write.mode("overwrite").parquet(f"{output_path}/dim_products")
     dim_dates.write.mode("overwrite").parquet(f"{output_path}/dim_dates")

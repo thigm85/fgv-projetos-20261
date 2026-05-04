@@ -21,7 +21,6 @@ def log(step: str, msg: str) -> None:
 
 
 def split_host_port(raw_host: str, raw_port: str):
-    # Normaliza host/porta para evitar erro de DNS com "host:porta".
     host = raw_host.strip()
     port = int(raw_port)
     if ":" in host:
@@ -66,7 +65,6 @@ expected_tables = [
 
 missing_tables = [table for table in expected_tables if table not in tables]
 if missing_tables:
-    # Guarda falhas para decidir o exit code ao final.
     failures.append({"type": "missing_tables", "value": missing_tables})
 
 thresholds = {
@@ -116,7 +114,6 @@ fk_checks = [
 
 log("3/4", "Validando integridade referencial basica.")
 for desc, required_tables, query in fk_checks:
-    # Só executa FK check se as tabelas necessárias existirem.
     missing_for_check = sorted([t for t in required_tables if t not in tables])
     if missing_for_check:
         failures.append({"type": "fk_check_skipped_missing_tables", "check": desc, "missing": missing_for_check})

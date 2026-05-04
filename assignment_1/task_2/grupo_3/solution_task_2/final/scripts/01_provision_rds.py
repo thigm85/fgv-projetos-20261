@@ -8,7 +8,6 @@ from typing import Optional
 
 
 def env_any(names, default=None, required=False):
-    # Lê a primeira variável disponível entre aliases.
     for name in names:
         value = os.getenv(name)
         if value:
@@ -23,7 +22,6 @@ def log(step: str, msg: str) -> None:
 
 
 def get_instance(rds, identifier: str) -> Optional[dict]:
-    # Consulta idempotente: retorna None quando a instância não existe.
     try:
         response = rds.describe_db_instances(DBInstanceIdentifier=identifier)
         return response["DBInstances"][0]
@@ -54,7 +52,6 @@ if dry_run:
     log("3/4", "DRY_RUN=1 ativo; nao aguardara waiter.")
 else:
     if status != "available":
-        # Espera explícita para suportar estados intermediários do RDS.
         log("3/4", "Aguardando estado 'available' com timeout explicito...")
         waiter = rds.get_waiter("db_instance_available")
         waiter.wait(DBInstanceIdentifier=db_instance_identifier, WaiterConfig={"Delay": 20, "MaxAttempts": 45})

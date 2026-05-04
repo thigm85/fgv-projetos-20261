@@ -23,7 +23,6 @@ def log(step: str, msg: str) -> None:
 
 
 def split_host_port(raw_host: str, raw_port: str):
-    # Aceita DB_HOST com ou sem sufixo ":porta".
     host = raw_host.strip()
     port = int(raw_port)
     if ":" in host:
@@ -35,7 +34,6 @@ def split_host_port(raw_host: str, raw_port: str):
 
 
 def connect_with_retry(host, port, user, password, database, retries, delay_seconds):
-    # Retry simples para absorver instabilidades logo após provisionamento.
     for attempt in range(1, retries + 1):
         try:
             return mysql.connector.connect(
@@ -92,7 +90,6 @@ cursor = conn.cursor()
 
 executed = 0
 try:
-    # Executa multi-statements em uma transação única.
     log("3/5", "Executando script SQL em transacao.")
     for result in cursor.execute(sql_commands, multi=True):
         _ = result.fetchall() if result.with_rows else None

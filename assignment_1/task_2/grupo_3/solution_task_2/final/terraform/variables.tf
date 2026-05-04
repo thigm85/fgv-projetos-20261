@@ -1,5 +1,4 @@
 variable "region" {
-  # Região principal da infraestrutura.
   description = "AWS region used to provision resources."
   type        = string
   default     = "us-east-1"
@@ -24,7 +23,6 @@ variable "db_username" {
 }
 
 variable "db_password" {
-  # Senha do usuário master do RDS (sensível).
   description = "Master password for RDS."
   type        = string
   sensitive   = true
@@ -37,7 +35,6 @@ variable "instance_class" {
 }
 
 variable "allowed_cidr" {
-  # CIDR de acesso administrativo ao MySQL durante laboratório.
   description = "CIDR allowed to connect to MySQL port 3306 (lab: use your current IP /32)."
   type        = string
 
@@ -59,7 +56,6 @@ variable "publicly_accessible" {
 }
 
 variable "etl_bucket_name" {
-  # Opcional: define nome fixo do bucket ETL.
   description = "S3 bucket name for ETL outputs and Glue script."
   type        = string
   default     = ""
@@ -84,14 +80,12 @@ variable "glue_workers" {
 }
 
 variable "existing_glue_role_arn" {
-  # Quando informado, evita criação de IAM Role pelo Terraform.
   description = "Existing IAM role ARN for Glue. If provided, Terraform will not create IAM role/policies."
   type        = string
   default     = ""
 }
 
 variable "manage_lab_ip_ingress_rule" {
-  # Deixe false em labs com restrições para evitar erro de regra duplicada.
   description = "Whether Terraform should manage the RDS ingress rule from allowed_cidr."
   type        = bool
   default     = false
