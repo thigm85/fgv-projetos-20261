@@ -1,20 +1,29 @@
+import json
 import os
 from pathlib import Path
 
-import envlocal
+import boto3
 import mysql.connector
+import envlocal
 
 envlocal.load()
+
+SECRET_ARN = os.environ["SECRET_ARN"]
+
+secret = json.loads(
+    boto3.client("secretsmanager", region_name="us-east-1")
+    .get_secret_value(SecretId=SECRET_ARN)["SecretString"]
+)
 
 SQL_FILE = Path(__file__).resolve().parents[3] / "data" / "mysqlsampledatabase.sql"
 
 # conecta a base de dados relacional
 conn = mysql.connector.connect(
-    host=os.environ["MYSQL_HOST"],
-    user=os.environ.get("MYSQL_USER", "admin"),
-    password=os.environ["MYSQL_PASSWORD"],
-    port=int(os.environ.get("MYSQL_PORT", "3306")),
-    use_pure=True
+    host=secret["host"],
+    user=secret["username"],
+    password=secret["password"],
+    port=int(secret["port"]),
+    use_pure=True,
 )
 
 # carrega o script de carga

@@ -131,7 +131,7 @@ resource "aws_db_instance" "mysql" {
   db_subnet_group_name   = aws_db_subnet_group.lab.name
   vpc_security_group_ids = [aws_security_group.mysql.id]
   
-  publicly_accessible = false
+  publicly_accessible = true
   
   skip_final_snapshot = true
 }
@@ -187,67 +187,91 @@ variable "glue_job_name" {
   default     = "classicmodels-etl-job"
 }
 
-resource "aws_iam_role" "glue_role" {
-  name = "lab-glue-role"
+data "aws_caller_identity" "current" {}
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Principal = { Service = "glue.amazonaws.com" },
-        Action = "sts:AssumeRole",
-      }
-    ]
-  })
+locals {
+  glue_role_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/LabRole"
 }
 
-resource "aws_iam_role_policy" "glue_policy" {
-  name = "lab-glue-policy"
-  role = aws_iam_role.glue_role.id
+# resource "aws_iam_role" "glue_role" {
+#   name = "lab-glue-role"
+#
+#   assume_role_policy = jsonencode({
+#     Version = "2012-10-17",
+#     Statement = [
+#       {
+#         Effect = "Allow",
+#         Principal = { Service = "glue.amazonaws.com" },
+#         Action = "sts:AssumeRole",
+#       }
+#     ]
+#   })
+# }
 
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        # Permissao de listar
-        Effect = "Allow",
-        Action = [
-          "s3:ListBucket"
-        ],
-        Resource = [aws_s3_bucket.data.arn]
-      },
-      {
-        # Permissao de escrita e leitura dentro do bucket
-        Effect = "Allow",
-        Action = [
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:DeleteObject"
-        ],
-        Resource = ["${aws_s3_bucket.data.arn}/*"]
-      },
-      {
-        # Permissao do cloudwatch
-        Effect = "Allow",
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ],
-        Resource = "*"
-      },
-      {
-        # Permissao do secretmanager
-        Effect = "Allow",
-        Action = [
-          "secretsmanager:GetSecretValue",
-          "secretsmanager:DescribeSecret"
-        ],
-        Resource = [aws_secretsmanager_secret.db_secret.arn]
-      }
-    ]
-  })
+# resource "aws_iam_role_policy" "glue_policy" {
+#   name = "lab-glue-policy"
+#   role = aws_iam_role.glue_role.id
+#
+#   policy = jsonencode({
+#     Version = "2012-10-17",
+#     Statement = [
+#       {
+#         # Permissao de listar
+#         Effect = "Allow",
+#         Action = [
+#           "s3:ListBucket"
+#         ],
+#         Resource = [aws_s3_bucket.data.arn]
+#       },
+#       {
+#         # Permissao de escrita e leitura dentro do bucket
+#         Effect = "Allow",
+#         Action = [
+#           "s3:GetObject",
+#           "s3:PutObject",
+#           "s3:DeleteObject"
+#         ],
+#         Resource = ["${aws_s3_bucket.data.arn}/*"]
+#       },
+#       {
+#         # Permissao do cloudwatch
+#         Effect = "Allow",
+#         Action = [
+#           "logs:CreateLogGroup",
+#           "logs:CreateLogStream",
+#           "logs:PutLogEvents"
+#         ],
+#         Resource = "*"
+#       },
+#       {
+#         # Permissao do secretmanager
+#         Effect = "Allow",
+#         Action = [
+#           "secretsmanager:GetSecretValue",
+#           "secretsmanager:DescribeSecret"
+#         ],
+#         Resource = [aws_secretsmanager_secret.db_secret.arn]
+#       }
+#     ]
+#   })
+# }
+
+# ==========================
+# VPC Endpoint para S3 (exigido pelo Glue em subnet sem NAT)
+# ==========================
+
+data "aws_route_table" "default" {
+  vpc_id = data.aws_vpc.default.id
+  filter {
+    name   = "association.main"
+    values = ["true"]
+  }
+}
+
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id          = data.aws_vpc.default.id
+  service_name    = "com.amazonaws.us-east-1.s3"
+  route_table_ids = [data.aws_route_table.default.id]
 }
 
 # ==========================
@@ -258,13 +282,24 @@ resource "aws_security_group" "glue" {
   name        = "lab-glue-sg"
   description = "Security group for Glue ENIs"
   vpc_id      = data.aws_vpc.default.id
+}
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = [data.aws_vpc.default.cidr_block]
-  }
+resource "aws_security_group_rule" "glue_self_ingress" {
+  type                     = "ingress"
+  from_port                = 0
+  to_port                  = 65535
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.glue.id
+  source_security_group_id = aws_security_group.glue.id
+}
+
+resource "aws_security_group_rule" "glue_self_egress" {
+  type                     = "egress"
+  from_port                = 0
+  to_port                  = 0
+  protocol                 = "-1"
+  security_group_id        = aws_security_group.glue.id
+  source_security_group_id = aws_security_group.glue.id
 }
 
 resource "aws_security_group_rule" "allow_mysql_from_glue" {
@@ -282,7 +317,8 @@ resource "aws_security_group_rule" "allow_mysql_from_glue" {
 # ==========================
 
 resource "aws_secretsmanager_secret" "db_secret" {
-  name = "classicmodels-db-secret"
+  name = "classicmodels-db-secret-gt"
+  recovery_window_in_days = 0
 }
 
 resource "aws_secretsmanager_secret_version" "db_secret_version" {
@@ -310,6 +346,7 @@ resource "aws_glue_connection" "rds_conn" {
 
   connection_properties = {
     JDBC_CONNECTION_URL = "jdbc:mysql://${aws_db_instance.mysql.address}:${aws_db_instance.mysql.port}/classicmodels"
+    SECRET_ID           = aws_secretsmanager_secret.db_secret.name
   }
 
   physical_connection_requirements {
@@ -319,9 +356,17 @@ resource "aws_glue_connection" "rds_conn" {
   }
 }
 
+# Upload ETL script to S3
+resource "aws_s3_object" "glue_script" {
+  bucket = aws_s3_bucket.data.id
+  key    = "scripts/glue_job_main.py"
+  source = "${path.module}/../glue/glue_job_main.py"
+  etag   = filemd5("${path.module}/../glue/glue_job_main.py")
+}
+
 resource "aws_glue_job" "etl" {
   name     = var.glue_job_name
-  role_arn = aws_iam_role.glue_role.arn
+  role_arn = local.glue_role_arn
 
   glue_version    = "3.0"
   number_of_workers = 2
@@ -333,9 +378,17 @@ resource "aws_glue_job" "etl" {
     script_location = "s3://${aws_s3_bucket.data.bucket}/scripts/glue_job_main.py"
   }
 
+  connections = [aws_glue_connection.rds_conn.name]
+
   default_arguments = {
-    "--TempDir" = "s3://${aws_s3_bucket.data.bucket}/tmp/"
+    "--TempDir"                          = "s3://${aws_s3_bucket.data.bucket}/tmp/"
+    "--SECRET_ARN"                       = aws_secretsmanager_secret.db_secret.arn
+    "--S3_BUCKET"                        = aws_s3_bucket.data.bucket
+    "--job-language"                     = "python"
+    "--enable-continuous-cloudwatch-log" = "true"
   }
+
+  depends_on = [aws_s3_object.glue_script]
 }
 
 
@@ -358,4 +411,14 @@ output "usuario" {
 
 output "secret_arn" {
   value = aws_secretsmanager_secret.db_secret.arn
+}
+
+#==========================
+# Salva no env
+#==========================
+
+resource "local_file" "env" {
+  filename        = "${path.module}/../src/.env"
+  file_permission = "0600"
+  content         = "SECRET_ARN=${aws_secretsmanager_secret.db_secret.arn}\n"
 }
