@@ -5,6 +5,7 @@ provider "aws" {
 resource "aws_security_group" "rds_sg" {
   name        = "${var.db_identifier}-sg"
   description = "Permitir acesso restrito ao RDS MySQL no laboratorio"
+  vpc_id      = data.aws_vpc.default.id
 
   ingress {
     description = "MySQL somente a partir do IP publico autorizado"

@@ -19,10 +19,17 @@ data "aws_route_tables" "default" {
   vpc_id = data.aws_vpc.default.id
 }
 
+data "aws_iam_role" "existing_glue_role" {
+  count = var.use_existing_lab_role ? 1 : 0
+  name  = var.existing_glue_role_name
+}
+
 locals {
   etl_bucket_name = "${var.project_prefix}-${data.aws_caller_identity.current.account_id}-${var.aws_region}"
   glue_script_key = "glue-scripts/etl_classicmodels_star_schema.py"
   output_prefix   = "curated/classicmodels"
+
+  glue_role_arn = var.use_existing_lab_role ? data.aws_iam_role.existing_glue_role[0].arn : aws_iam_role.glue_role[0].arn
 }
 
 resource "aws_s3_bucket" "etl_bucket" {
@@ -104,6 +111,8 @@ resource "aws_security_group_rule" "rds_from_glue" {
 }
 
 data "aws_iam_policy_document" "glue_assume_role" {
+  count = var.use_existing_lab_role ? 0 : 1
+
   statement {
     effect = "Allow"
 
@@ -117,8 +126,10 @@ data "aws_iam_policy_document" "glue_assume_role" {
 }
 
 resource "aws_iam_role" "glue_role" {
+  count = var.use_existing_lab_role ? 0 : 1
+
   name               = "${var.project_prefix}-glue-role"
-  assume_role_policy = data.aws_iam_policy_document.glue_assume_role.json
+  assume_role_policy = data.aws_iam_policy_document.glue_assume_role[0].json
 
   tags = {
     Project = "classicmodels-task2"
@@ -126,11 +137,15 @@ resource "aws_iam_role" "glue_role" {
 }
 
 resource "aws_iam_role_policy_attachment" "glue_service_role" {
-  role       = aws_iam_role.glue_role.name
+  count = var.use_existing_lab_role ? 0 : 1
+
+  role       = aws_iam_role.glue_role[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole"
 }
 
 data "aws_iam_policy_document" "glue_s3_policy" {
+  count = var.use_existing_lab_role ? 0 : 1
+
   statement {
     sid    = "AllowGlueBucketAccess"
     effect = "Allow"
@@ -150,9 +165,11 @@ data "aws_iam_policy_document" "glue_s3_policy" {
 }
 
 resource "aws_iam_role_policy" "glue_s3_policy" {
+  count = var.use_existing_lab_role ? 0 : 1
+
   name   = "${var.project_prefix}-glue-s3-policy"
-  role   = aws_iam_role.glue_role.id
-  policy = data.aws_iam_policy_document.glue_s3_policy.json
+  role   = aws_iam_role.glue_role[0].id
+  policy = data.aws_iam_policy_document.glue_s3_policy[0].json
 }
 
 resource "aws_s3_object" "glue_script" {
@@ -181,7 +198,7 @@ resource "aws_glue_connection" "classicmodels_mysql" {
 
 resource "aws_glue_job" "classicmodels_etl" {
   name              = "${var.project_prefix}-classicmodels-etl"
-  role_arn          = aws_iam_role.glue_role.arn
+  role_arn          = local.glue_role_arn
   glue_version      = "4.0"
   worker_type       = "G.1X"
   number_of_workers = 2
@@ -211,8 +228,6 @@ resource "aws_glue_job" "classicmodels_etl" {
 
   depends_on = [
     aws_s3_object.glue_script,
-    aws_iam_role_policy_attachment.glue_service_role,
-    aws_iam_role_policy.glue_s3_policy,
     aws_security_group_rule.rds_from_glue,
     aws_vpc_endpoint.s3
   ]
