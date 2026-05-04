@@ -78,7 +78,7 @@ resource "aws_security_group" "mysql" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = [data.aws_vpc.default.cidr_block]
   }
 }
 
@@ -101,10 +101,225 @@ resource "aws_db_instance" "mysql" {
   db_subnet_group_name   = aws_db_subnet_group.lab.name
   vpc_security_group_ids = [aws_security_group.mysql.id]
   
-  publicly_accessible = true
+  publicly_accessible = false
   
   skip_final_snapshot = true
 }
+
+
+# ==========================
+# S3 bucket for Glue outputs
+# ==========================
+
+variable "s3_bucket_name" {
+  type        = string
+  description = "S3 bucket name to store Glue outputs (must be globally unique)"
+}
+
+resource "aws_s3_bucket" "data" {
+  bucket = var.s3_bucket_name
+  acl    = "private"
+}
+
+resource "aws_s3_bucket_versioning" "data" {
+  bucket = aws_s3_bucket.data.id
+
+  versioning_configuration {
+    status = "Suspended"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "data" {
+  bucket = aws_s3_bucket.data.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "data_block" {
+  bucket = aws_s3_bucket.data.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# ==========================
+# Glue IAM role and policy
+# ==========================
+
+variable "glue_job_name" {
+  type        = string
+  description = "Name for the Glue job"
+  default     = "classicmodels-etl-job"
+}
+
+resource "aws_iam_role" "glue_role" {
+  name = "lab-glue-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = { Service = "glue.amazonaws.com" },
+        Action = "sts:AssumeRole",
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "glue_policy" {
+  name = "lab-glue-policy"
+  role = aws_iam_role.glue_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        # Permissao de listar
+        Effect = "Allow",
+        Action = [
+          "s3:ListBucket"
+        ],
+        Resource = [aws_s3_bucket.data.arn]
+      },
+      {
+        # Permissao de escrita e leitura dentro do bucket
+        Effect = "Allow",
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject"
+        ],
+        Resource = ["${aws_s3_bucket.data.arn}/*"]
+      },
+      {
+        # Permissao do cloudwatch
+        Effect = "Allow",
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ],
+        Resource = "*"
+      },
+      {
+        # Permissao do secretmanager
+        Effect = "Allow",
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ],
+        Resource = [aws_secretsmanager_secret.db_secret.arn]
+      }
+    ]
+  })
+}
+
+# ==========================
+# Security group para o Glue e rule para acessar o RDS
+# ==========================
+
+resource "aws_security_group" "glue" {
+  name        = "lab-glue-sg"
+  description = "Security group for Glue ENIs"
+  vpc_id      = data.aws_vpc.default.id
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = [data.aws_vpc.default.cidr_block]
+  }
+}
+
+resource "aws_security_group_rule" "allow_mysql_from_glue" {
+  type                     = "ingress"
+  from_port                = 3306
+  to_port                  = 3306
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.mysql.id
+  source_security_group_id = aws_security_group.glue.id
+  description              = "Allow MySQL access from Glue"
+}
+
+# ==========================
+# S3 VPC endpoint para o Glue acessar sem precisar acesso publico
+# ==========================
+
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id            = data.aws_vpc.default.id
+  service_name      = "com.amazonaws.us-east-1.s3"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids   = concat(data.aws_route_tables.private_a.ids, data.aws_route_tables.private_b.ids)
+}
+
+# ==========================
+# Secrets Manager (DB credentials)
+# ==========================
+
+resource "aws_secretsmanager_secret" "db_secret" {
+  name = "classicmodels-db-secret"
+}
+
+resource "aws_secretsmanager_secret_version" "db_secret_version" {
+  secret_id     = aws_secretsmanager_secret.db_secret.id
+  secret_string = jsonencode({
+    username = "admin",
+    password = var.senha_master,
+    host     = aws_db_instance.mysql.address,
+    port     = aws_db_instance.mysql.port,
+    dbname   = "classicmodels"
+  })
+}
+
+# ==========================
+# Glue Data Catalog database, connection and job (simples)
+# ==========================
+
+resource "aws_glue_catalog_database" "analytics" {
+  name = "classicmodels_analytics"
+}
+
+resource "aws_glue_connection" "rds_conn" {
+  name = "classicmodels-jdbc-conn"
+  connection_type = "JDBC"
+
+  connection_properties = {
+    JDBC_CONNECTION_URL = "jdbc:mysql://${aws_db_instance.mysql.address}:${aws_db_instance.mysql.port}/classicmodels"
+  }
+
+  physical_connection_requirements {
+    availability_zone      = data.aws_subnet.glue.availability_zone
+    subnet_id              = sort(data.aws_subnets.private_a.ids)[0]
+    security_group_id_list  = [aws_security_group.glue.id]
+  }
+}
+
+resource "aws_glue_job" "etl" {
+  name     = var.glue_job_name
+  role_arn = aws_iam_role.glue_role.arn
+
+  glue_version    = "3.0"
+  number_of_workers = 2
+  worker_type     = "G.1X"
+
+  command {
+    name         = "glueetl"
+    python_version = "3"
+    script_location = "s3://${aws_s3_bucket.data.bucket}/scripts/glue_job_main.py"
+  }
+
+  default_arguments = {
+    "--TempDir" = "s3://${aws_s3_bucket.data.bucket}/tmp/"
+  }
+}
+
 
 #==========================
 # Saídas no terminal após apply (terraform output)
@@ -123,17 +338,6 @@ output "usuario" {
   value = "admin"
 }
 
-#==========================
-# Grava ../src/.env (host, porta, usuário, senha)
-#==========================
-
-resource "local_file" "rds_env" {
-  filename        = "${path.module}/../src/.env"
-  file_permission = "0600"
-  content         = <<-EOT
-MYSQL_HOST=${aws_db_instance.mysql.address}
-MYSQL_PORT=${aws_db_instance.mysql.port}
-MYSQL_USER=admin
-MYSQL_PASSWORD=${var.senha_master}
-EOT
+output "secret_arn" {
+  value = aws_secretsmanager_secret.db_secret.arn
 }
