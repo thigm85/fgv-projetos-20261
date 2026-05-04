@@ -27,7 +27,7 @@ jdbc_opts = {
     "url": jdbc_url,
     "user": user,
     "password": password,
-    "driver": "com.mysql.jdbc.Driver",
+    "driver": "com.mysql.cj.jdbc.Driver",
 }
 
 S3 = f"s3://{args['S3_BUCKET']}/data"
