@@ -1,0 +1,27 @@
+# =========================
+# CONFIG
+# =========================
+.env
+terraform.tfvars
+
+# =========================
+# TERRAFORM
+# =========================
+*.tfvars
+.terraform
+*.tfstate
+*.tfstate.backup
+*.tfplan
+
+# =========================
+# PYTHON
+# =========================
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# etc.
+.vscode/
