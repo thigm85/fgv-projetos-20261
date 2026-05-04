@@ -61,9 +61,6 @@ data "aws_subnets" "default" {
   }
 }
 
-data "aws_subnet" "glue" {
-  id = sort(data.aws_subnets.default.ids)[0]
-}
 
 resource "aws_db_subnet_group" "lab" {
   name       = "lab-mysql-subnets"
@@ -71,19 +68,35 @@ resource "aws_db_subnet_group" "lab" {
 }
 
 #==========================
-# Firewall RDS — só meu IP na 3306
+# Security group único — RDS + Glue
 #==========================
 
 resource "aws_security_group" "mysql" {
   name        = "lab-mysql-sg"
-  description = "Libera MySQL (3306) so para o meu IP"
+  description = "MySQL (3306): meu IP + self (Glue ENIs)"
   vpc_id      = data.aws_vpc.default.id
 
+  # Acesso do meu IP (cliente MySQL local).
   ingress {
     from_port   = 3306
     to_port     = 3306
     protocol    = "tcp"
     cidr_blocks = ["${var.meu_ip}/32"]
+  }
+
+  # Self-reference: ENIs do Glue usam esse mesmo SG e falam entre si.
+  ingress {
+    from_port = 0
+    to_port   = 0
+    protocol  = "-1"
+    self      = true
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
@@ -130,58 +143,6 @@ locals {
 }
 
 # ==========================
-# VPC Endpoint para S3 (exigido pelo Glue em subnet sem NAT)
-# ==========================
-
-data "aws_route_table" "default" {
-  vpc_id = data.aws_vpc.default.id
-  filter {
-    name   = "association.main"
-    values = ["true"]
-  }
-}
-
-resource "aws_vpc_endpoint" "s3" {
-  vpc_id          = data.aws_vpc.default.id
-  service_name    = "com.amazonaws.us-east-1.s3"
-  route_table_ids = [data.aws_route_table.default.id]
-}
-
-# ==========================
-# Security group para o Glue (self-reference + acesso ao RDS)
-# ==========================
-
-resource "aws_security_group" "glue" {
-  name        = "lab-glue-sg"
-  description = "Security group for Glue ENIs"
-  vpc_id      = data.aws_vpc.default.id
-
-  ingress {
-    from_port = 0
-    to_port   = 65535
-    protocol  = "tcp"
-    self      = true
-  }
-
-  egress {
-    from_port = 0
-    to_port   = 0
-    protocol  = "-1"
-    self      = true
-  }
-}
-
-resource "aws_security_group_rule" "allow_mysql_from_glue" {
-  type                     = "ingress"
-  from_port                = 3306
-  to_port                  = 3306
-  protocol                 = "tcp"
-  security_group_id        = aws_security_group.mysql.id
-  source_security_group_id = aws_security_group.glue.id
-  description              = "Allow MySQL access from Glue"
-}
-
-# ==========================
 # Secrets Manager (credenciais do RDS)
 # ==========================
 
@@ -205,8 +166,36 @@ resource "aws_secretsmanager_secret_version" "db_secret_version" {
 # Glue connection e job
 # ==========================
 
+# Subnet na mesma AZ do RDS (Glue ENI tem que subir ali).
+data "aws_subnets" "rds_az" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+  filter {
+    name   = "availability-zone"
+    values = [aws_db_instance.mysql.availability_zone]
+  }
+}
+
+# Main route table da VPC (subnets sem associação explícita usam essa).
+data "aws_route_table" "main" {
+  vpc_id = data.aws_vpc.default.id
+  filter {
+    name   = "association.main"
+    values = ["true"]
+  }
+}
+
+# VPC endpoint S3 — exigido pelo Glue mesmo em subnet pública.
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id          = data.aws_vpc.default.id
+  service_name    = "com.amazonaws.us-east-1.s3"
+  route_table_ids = [data.aws_route_table.main.id]
+}
+
 resource "aws_glue_connection" "rds_conn" {
-  name = "classicmodels-jdbc-conn"
+  name            = "classicmodels-jdbc-conn"
   connection_type = "JDBC"
 
   connection_properties = {
@@ -215,9 +204,9 @@ resource "aws_glue_connection" "rds_conn" {
   }
 
   physical_connection_requirements {
-    availability_zone      = data.aws_subnet.glue.availability_zone
-    subnet_id              = sort(data.aws_subnets.default.ids)[0]
-    security_group_id_list = [aws_security_group.glue.id]
+    availability_zone      = aws_db_instance.mysql.availability_zone
+    subnet_id              = sort(data.aws_subnets.rds_az.ids)[0]
+    security_group_id_list = [aws_security_group.mysql.id]
   }
 }
 
@@ -233,7 +222,7 @@ resource "aws_glue_job" "etl" {
   name     = var.glue_job_name
   role_arn = local.glue_role_arn
 
-  glue_version    = "4.0"
+  glue_version      = "4.0"
   number_of_workers = 2
   worker_type     = "G.1X"
 
