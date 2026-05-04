@@ -74,40 +74,18 @@ data "aws_subnets" "private_b" {
   }
 }
 
-# Route table por subnet — detecta quais têm rota para IGW (públicas).
-data "aws_route_table" "private_a" {
-  for_each  = toset(data.aws_subnets.private_a.ids)
-  subnet_id = each.value
-}
-
-data "aws_route_table" "private_b" {
-  for_each  = toset(data.aws_subnets.private_b.ids)
-  subnet_id = each.value
-}
-
-locals {
-  # Subnets sem rota 0.0.0.0/0 para IGW (privadas de verdade).
-  subnet_a = sort([
-    for sid, rt in data.aws_route_table.private_a : sid
-    if !anytrue([for r in rt.routes : startswith(coalesce(r.gateway_id, ""), "igw-")])
-  ])[0]
-
-  subnet_b = sort([
-    for sid, rt in data.aws_route_table.private_b : sid
-    if !anytrue([for r in rt.routes : startswith(coalesce(r.gateway_id, ""), "igw-")])
-  ])[0]
-}
-
 # Subnet Glue
 data "aws_subnet" "glue" {
-  id = local.subnet_a
+  id = sort(data.aws_subnets.private_a.ids)[0]
 }
-
 
 # Subnet RDS
 resource "aws_db_subnet_group" "lab" {
   name       = "lab-mysql-subnets"
-  subnet_ids = [local.subnet_a, local.subnet_b]
+  subnet_ids = [
+    sort(data.aws_subnets.private_a.ids)[0],
+    sort(data.aws_subnets.private_b.ids)[0],
+  ]
 }
 
 #==========================
@@ -307,7 +285,7 @@ resource "aws_vpc_endpoint" "s3" {
   vpc_id            = data.aws_vpc.default.id
   service_name      = "com.amazonaws.us-east-1.s3"
   vpc_endpoint_type = "Gateway"
-  route_table_ids   = distinct([for rt in merge(data.aws_route_table.private_a, data.aws_route_table.private_b) : rt.id])
+  route_table_ids   = data.aws_vpc.default.main_route_table_id != null ? [data.aws_vpc.default.main_route_table_id] : []
 }
 
 # ==========================
@@ -347,7 +325,7 @@ resource "aws_glue_connection" "rds_conn" {
 
   physical_connection_requirements {
     availability_zone      = data.aws_subnet.glue.availability_zone
-    subnet_id              = local.subnet_a
+    subnet_id              = sort(data.aws_subnets.private_a.ids)[0]
     security_group_id_list  = [aws_security_group.glue.id]
   }
 }
