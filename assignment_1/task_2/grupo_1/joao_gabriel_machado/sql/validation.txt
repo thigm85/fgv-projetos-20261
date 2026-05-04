@@ -1,0 +1,45 @@
+=== Validation of classicmodels ===
+
+Tables found (8): customers, employees, offices, orderdetails, orders, payments, productlines, products
+
+----------------------------------------
+Table: customers
+  - Lines: 122
+  - Uniques:   122
+  - Status: OK
+----------------------------------------
+Table: employees
+  - Lines: 23
+  - Uniques:   23
+  - Status: OK
+----------------------------------------
+Table: offices
+  - Lines: 7
+  - Uniques:   7
+  - Status: OK
+----------------------------------------
+Table: orderdetails
+  - Lines: 2996
+  - Uniques:   2996
+  - Status: OK
+----------------------------------------
+Table: orders
+  - Lines: 326
+  - Uniques:   326
+  - Status: OK
+----------------------------------------
+Table: payments
+  - Lines: 273
+  - Uniques:   273
+  - Status: OK
+----------------------------------------
+Table: productlines
+  - Lines: 7
+  - Uniques:   7
+  - Status: OK
+----------------------------------------
+Table: products
+  - Lines: 110
+  - Uniques:   110
+  - Status: OK
+----------------------------------------
