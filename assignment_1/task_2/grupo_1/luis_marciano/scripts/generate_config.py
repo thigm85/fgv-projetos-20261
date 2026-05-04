@@ -3,7 +3,7 @@ import json
 
 def get_terraform_output():
     try:
-        result = subprocess.run(['terraform', 'output', '-json'], capture_output=True, text=True, cwd='.')
+        result = subprocess.run(['terraform', 'output', '-json'], capture_output=True, text=True, cwd='terraform')
         if result.returncode != 0:
             raise Exception(f"Erro no terraform output: {result.stderr}")
         outputs = json.loads(result.stdout)

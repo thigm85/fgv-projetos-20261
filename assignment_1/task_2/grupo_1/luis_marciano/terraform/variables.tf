@@ -45,3 +45,21 @@ variable "password" {
   type        = string
   sensitive   = true
 }
+
+variable "s3_bucket_name" {
+  description = "S3 bucket name for data lake"
+  type        = string
+  default     = "classicmodels-data-lake"
+}
+
+variable "glue_job_name" {
+  description = "AWS Glue job name"
+  type        = string
+  default     = "classicmodels-etl"
+}
+
+variable "glue_database_name" {
+  description = "Glue catalog database name"
+  type        = string
+  default     = "classicmodels"
+}
