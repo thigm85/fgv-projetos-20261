@@ -5,13 +5,16 @@ Provisionamento da instância MySQL no Amazon RDS
 import boto3
 import json
 import os
+import time
+import urllib.request
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
 
 load_dotenv()
-# ─────────────────────────────────────────────
-# CONFIGURAÇÕES — edite antes de executar
-# ─────────────────────────────────────────────
+
+# ---------------------------------------------
+# CONFIGURAÇÕES
+# ---------------------------------------------
 CONFIG = {
     "region":              "us-east-1",
     "db_instance_id":      "classicmodels-db",
@@ -24,22 +27,70 @@ CONFIG = {
     "publicly_accessible": True,                # necessário para acesso local
     "credentials_file":    "rds_credentials.json",
 }
-# ─────────────────────────────────────────────
+# ---------------------------------------------
+
+
+# --- Validação de configuração obrigatória ---
+def validate_config(cfg: dict) -> None:
+    """
+    Garante que variáveis obrigatórias estão presentes antes de chamar a AWS.
+    Evita falhas crípticas dentro do boto3 quando USERNAME/PASSWORD não estão no .env
+    """
+    missing = [k for k in ("master_username", "master_password") if not cfg.get(k)]
+    if missing:
+        raise RuntimeError(
+            f"Variáveis de ambiente obrigatórias ausentes: {', '.join(missing)}\n"
+            "  Crie um arquivo .env com USERNAME=<seu_usuario> e PASSWORD=<sua_senha>"
+        )
+
+
+# --- Obtém o IP público atual para regra /32 ---
+def get_my_public_ip() -> str:
+    """
+    Retorna o IP público da máquina local para criar regra de SG restrita (/32).
+    Muito mais seguro que abrir 0.0.0.0/0 para toda a internet.
+    """
+    try:
+        with urllib.request.urlopen("https://api.ipify.org", timeout=5) as resp:
+            ip = resp.read().decode().strip()
+            print(f"  IP público detectado: {ip}")
+            return ip
+    except Exception:
+        # Fallback: solicita ao usuário (não deixa cair para 0.0.0.0/0)
+        ip = input(
+            "  Não foi possível detectar IP automaticamente.\n"
+            "  Informe seu IP público (ex: 200.150.100.50): "
+        ).strip()
+        if not ip:
+            raise RuntimeError("IP público não fornecido. Abortando por segurança.")
+        return ip
 
 
 def get_or_create_security_group(ec2, group_name: str) -> str:
-    """Retorna o ID de um security group que libera MySQL (3306) publicamente."""
+    """
+    Retorna o ID de um SG que libera MySQL (3306) APENAS para o IP atual (/32).
+
+    MUDANÇA EM RELAÇÃO À VERSÃO ANTERIOR:
+      - Antes: abria 0.0.0.0/0 (toda a internet)
+      - Agora: restringe ao IP público atual (/32)
+    """
+    my_ip = get_my_public_ip()
+    my_cidr = f"{my_ip}/32"
+
     try:
         resp = ec2.describe_security_groups(GroupNames=[group_name])
         sg_id = resp["SecurityGroups"][0]["GroupId"]
         print(f"  Security group já existe: {sg_id}")
+
+        # Garante que a regra para o IP atual existe (pode ter mudado de sessão para sessão)
+        _ensure_ingress_rule(ec2, sg_id, my_cidr)
         return sg_id
     except ClientError:
-        pass  # não existe, vamos criar
+        pass  # não existe ainda, vamos criar
 
-    vpc_id = ec2.describe_vpcs(Filters=[{"Name": "isDefault", "Values": ["true"]}])[
-        "Vpcs"
-    ][0]["VpcId"]
+    vpc_id = ec2.describe_vpcs(
+        Filters=[{"Name": "isDefault", "Values": ["true"]}]
+    )["Vpcs"][0]["VpcId"]
 
     sg = ec2.create_security_group(
         GroupName=group_name,
@@ -55,12 +106,59 @@ def get_or_create_security_group(ec2, group_name: str) -> str:
                 "IpProtocol": "tcp",
                 "FromPort": 3306,
                 "ToPort": 3306,
-                "IpRanges": [{"CidrIp": "0.0.0.0/0", "Description": "MySQL publico"}],
+                "IpRanges": [
+                    {
+                        "CidrIp": my_cidr,
+                        "Description": f"MySQL lab - IP restrito ({int(time.time())})",
+                    }
+                ],
             }
         ],
     )
-    print(f"  Security group criado e configurado: {sg_id}")
+    print(f"  Security group criado com acesso restrito a {my_cidr}: {sg_id}")
     return sg_id
+
+
+def _ensure_ingress_rule(ec2, sg_id: str, my_cidr: str) -> None:
+    """
+    Adiciona regra para o IP atual se ainda não existir no SG.
+    Útil quando o IP muda entre sessões de laboratório.
+    """
+    resp = ec2.describe_security_groups(GroupIds=[sg_id])
+    existing_cidrs = {
+        ip_range["CidrIp"]
+        for perm in resp["SecurityGroups"][0].get("IpPermissions", [])
+        if perm.get("FromPort") == 3306
+        for ip_range in perm.get("IpRanges", [])
+    }
+
+    if my_cidr in existing_cidrs:
+        print(f"  Regra para {my_cidr} já existe no SG.")
+        return
+
+    try:
+        ec2.authorize_security_group_ingress(
+            GroupId=sg_id,
+            IpPermissions=[
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 3306,
+                    "ToPort": 3306,
+                    "IpRanges": [
+                        {
+                            "CidrIp": my_cidr,
+                            "Description": f"MySQL lab - IP atualizado ({int(time.time())})",
+                        }
+                    ],
+                }
+            ],
+        )
+        print(f"  Regra adicionada para novo IP: {my_cidr}")
+    except ClientError as e:
+        if "InvalidPermission.Duplicate" in str(e):
+            pass  # já existe, ok
+        else:
+            raise
 
 
 def provision_rds(cfg: dict) -> dict:
@@ -75,11 +173,28 @@ def provision_rds(cfg: dict) -> dict:
     # Verifica se a instância já existe
     try:
         resp = rds.describe_db_instances(DBInstanceIdentifier=cfg["db_instance_id"])
-        status = resp["DBInstances"][0]["DBInstanceStatus"]
-        endpoint = resp["DBInstances"][0].get("Endpoint", {}).get("Address", "pending")
+        db = resp["DBInstances"][0]
+        status = db["DBInstanceStatus"]
         print(f"\n[2/3] Instância já existe (status: {status}).")
+
+        # aguarda 'available' mesmo quando a instância já existe,
+        # caso esteja em estado intermediário como 'creating' ou 'modifying'.
+        if status != "available":
+            print(f"      Status '{status}' — aguardando ficar disponível...")
+            waiter = rds.get_waiter("db_instance_available")
+            waiter.wait(
+                DBInstanceIdentifier=cfg["db_instance_id"],
+                WaiterConfig={"Delay": 20, "MaxAttempts": 30},
+            )
+            # Re-busca endpoint após waiter (pode não estar preenchido antes)
+            resp = rds.describe_db_instances(DBInstanceIdentifier=cfg["db_instance_id"])
+            db = resp["DBInstances"][0]
+
+        endpoint = db.get("Endpoint", {}).get("Address", "pending")
+        port = db.get("Endpoint", {}).get("Port", 3306)
         print(f"      Endpoint: {endpoint}")
-        return build_credentials(cfg, endpoint)
+        return build_credentials(cfg, endpoint, port)
+
     except ClientError as e:
         if "DBInstanceNotFound" not in str(e):
             raise
@@ -141,6 +256,9 @@ def main():
     print("  Provisionamento RDS MySQL — classicmodels lab")
     print("=" * 55)
 
+    # valida config antes de qualquer chamada AWS
+    validate_config(CONFIG)
+
     creds = provision_rds(CONFIG)
     save_credentials(creds, CONFIG["credentials_file"])
 
@@ -149,7 +267,8 @@ def main():
     print("=" * 55)
     for k, v in creds.items():
         label = k.ljust(12)
-        print(f"  {label}: {v}")
+        display = "***" if k == "password" else v   # não imprime senha
+        print(f"  {label}: {display}")
     print("=" * 55)
 
 
