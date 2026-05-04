@@ -1,14 +1,19 @@
+import os
+import sys
 import mysql.connector
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # 1. Configurações de Conexão
 # Substitir o "host" pelo endpoint gerado no outputs do Terraform
 DB_CONFIG = {
-    "host": "terraform-20260407235920750500000001.cejyiy0y8cii.us-east-1.rds.amazonaws.com",
-    "user": "admin",
-    "password": "password",
-    "database": "classicmodels",
-    "port": 3306,
-    'use_pure': True
+    "host": os.getenv("DB_HOST"),
+    "user": os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASSWORD"),
+    "database": os.getenv("DB_NAME", "classicmodels"),
+    "port": int(os.getenv("DB_PORT", 3306)),
+    "use_pure": True
 }
 
 SQL_FILE = ".\data\mysqlsampledatabase.sql"
@@ -18,6 +23,7 @@ def load_data():
     try:
         # Estabelece a conexão
         conn = mysql.connector.connect(**DB_CONFIG)
+        conn.autocommit = False
         cursor = conn.cursor()
         print("Conexão estabelecida com sucesso!")
 
@@ -29,7 +35,7 @@ def load_data():
         # Executa os comandos do arquivo
         print("Executando comandos SQL. Isso pode levar alguns segundos...")
         
-        results = cursor.execute(sql_script)
+        results = cursor.execute(sql_script, multi=True)
         
         # Verifica se 'results' não é None antes de tentar iterar
         if results is not None:
@@ -38,11 +44,14 @@ def load_data():
             
         conn.commit()
         print("Carga de dados concluída com sucesso!")
+        sys.exit(0)
 
     except mysql.connector.Error as err:
         print(f"Erro no banco de dados: {err}")
+        sys.exit(1)
     except FileNotFoundError:
         print(f"Erro: O arquivo \"{SQL_FILE}\" não foi encontrado no diretório atual.")
+        sys.exit(1)
     finally:
         if "conn" in locals() and conn.is_connected():
             cursor.close()

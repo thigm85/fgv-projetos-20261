@@ -1,14 +1,23 @@
+import os
+import sys
 import mysql.connector
+from dotenv import load_dotenv
 
-# Utilize as mesmas configurações do script de carga
+load_dotenv()
+
 DB_CONFIG = {
-    "host": "terraform-20260407235920750500000001.cejyiy0y8cii.us-east-1.rds.amazonaws.com",
-    "user": "admin",
-    "password": "password",
-    "database": "classicmodels",
-    "port": 3306,
-    'use_pure': True
+    "host": os.getenv("DB_HOST"),
+    "user": os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASSWORD"),
+    "database": os.getenv("DB_NAME", "classicmodels"),
+    "port": int(os.getenv("DB_PORT", 3306)),
+    "use_pure": True
 }
+
+EXPECTED_TABLES = [
+    "customers", "employees", "offices", "orderdetails", 
+    "orders", "payments", "productlines", "products"
+]
 
 def validate_database():
     print("Iniciando validação do banco de dados no RDS...\n")
@@ -22,7 +31,7 @@ def validate_database():
         
         if not tables:
             print("Nenhuma tabela encontrada. Verifique o script de carga.")
-            return
+            sys.exit(1)
 
         print(f"Foram encontradas {len(tables)} tabelas. Verificando o volume de dados:\n")
         print("-" * 40)
@@ -39,10 +48,22 @@ def validate_database():
 
         print("-" * 40)
         print(f"{'TOTAL GERAL':<20} | {total_records:>15}\n")
+
+        missing_tables = [t for t in EXPECTED_TABLES if t not in tables]
+        if missing_tables:
+            print(f"-> FALHA: Estão faltando as seguintes tabelas: {missing_tables}")
+            sys.exit(1)
+
+        if total_records == 0:
+            print("-> FALHA: Nenhuma linha foi inserida no banco.")
+            sys.exit(1)
+
         print("Validação concluída: O sistema de origem está pronto!")
+        sys.exit(0)
 
     except mysql.connector.Error as err:
         print(f"Erro durante a validação: {err}")
+        sys.exit(1)
     finally:
         if 'conn' in locals() and conn.is_connected():
             cursor.close()
