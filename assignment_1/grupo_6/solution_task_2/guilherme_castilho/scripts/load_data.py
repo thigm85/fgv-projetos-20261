@@ -16,7 +16,8 @@ DB_CONFIG = {
     "use_pure": True
 }
 
-SQL_FILE = ".\data\mysqlsampledatabase.sql"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+SQL_FILE = os.path.join(BASE_DIR, "..", "data", "mysqlsampledatabase.sql")
 
 def load_data():
     print("Iniciando conexão com o Amazon RDS...")
@@ -35,7 +36,7 @@ def load_data():
         # Executa os comandos do arquivo
         print("Executando comandos SQL. Isso pode levar alguns segundos...")
         
-        results = cursor.execute(sql_script, multi=True)
+        results = cursor.execute(sql_script)
         
         # Verifica se 'results' não é None antes de tentar iterar
         if results is not None:

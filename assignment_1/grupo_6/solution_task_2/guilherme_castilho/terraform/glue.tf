@@ -19,6 +19,14 @@ resource "aws_glue_connection" "rds_conn" {
     USERNAME            = var.db_username
     PASSWORD            = var.db_password
   }
+
+  physical_connection_requirements {
+    availability_zone      = aws_db_instance.mysql_source.availability_zone
+    security_group_id_list = [aws_security_group.rds_sg.id]
+    
+    # Agora aponta para a sub-rede que filtramos acima
+    subnet_id              = tolist(data.aws_subnets.rds_subnet.ids)[0]
+  }
 }
 
 # Envio do script ETL para o S3
@@ -54,4 +62,32 @@ resource "aws_glue_job" "etl_job" {
 
 output "s3_datalake_bucket" {
   value = aws_s3_bucket.datalake.bucket
+}
+
+# Coleta informações da rede padrão (VPC) e subnets
+data "aws_vpc" "default" {
+  default = true
+}
+
+data "aws_subnets" "rds_subnet" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+  filter {
+    name   = "availability-zone"
+    # Pega a AZ exata onde o RDS foi provisionado
+    values = [aws_db_instance.mysql_source.availability_zone] 
+  }
+}
+
+data "aws_route_tables" "default" {
+  vpc_id = data.aws_vpc.default.id
+}
+
+# Cria o endpoint para o S3
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id          = data.aws_vpc.default.id
+  service_name    = "com.amazonaws.${var.aws_region}.s3"
+  route_table_ids = data.aws_route_tables.default.ids
 }

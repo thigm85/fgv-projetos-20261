@@ -17,6 +17,13 @@ resource "aws_security_group" "rds_sg" {
     cidr_blocks = ["${chomp(data.http.myip.response_body)}/32"]
   }
 
+  ingress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    self        = true
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
