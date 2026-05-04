@@ -3,6 +3,9 @@
 *.tfstate
 *.tfstate.backup
 .terraform.lock.hcl
+.env
+*.tfvars
+*.tfvars.json
 
 # Python
 .venv/

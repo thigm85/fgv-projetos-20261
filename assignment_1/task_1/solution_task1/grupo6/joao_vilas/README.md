@@ -59,8 +59,18 @@ As credenciais expiram a cada sessão do laboratório.
 
 ```bash
 cd terraform
+
 terraform init
-terraform apply
+terraform fmt
+terraform validate
+
+terraform plan \
+  -var="db_password=SUA_SENHA_FORTE" \
+  -var="allowed_mysql_cidr=SEU_IP_PUBLICO/32"
+
+terraform apply \
+  -var="db_password=SUA_SENHA_FORTE" \
+  -var="allowed_mysql_cidr=SEU_IP_PUBLICO/32"
 ```
 
 Informe `var.db_password` (mínimo 8 caracteres), confirme com `yes`. Aguarde ~5–10 minutos. Anote o **`rds_endpoint`** no output.
@@ -71,26 +81,18 @@ Informe `var.db_password` (mínimo 8 caracteres), confirme com `yes`. Aguarde ~5
 cd ../scripts
 ```
 
-Em `load_data.py` e `validate_data.py`, ajuste **`HOST`** (endpoint do RDS) e **`PASSWORD`** (mesma do Terraform).
+Para configurar as variáveis de ambiente adequado:
+```bash
+cp .env.example .env
+```
+Em seguida rode `load_data.py` e `validate_data.py`.
 
 ```bash
 python load_data.py
 python validate_data.py
 ```
 
-**Validação esperada:** listagem das 8 tabelas com contagens:
-
-| Tabela        | Linhas |
-|---------------|--------|
-| customers     | 122    |
-| employees     | 23     |
-| offices       | 7      |
-| orderdetails  | 2996   |
-| orders        | 326    |
-| payments      | 273    |
-| productlines  | 7      |
-| products      | 110    |
-
+A validação retorna exit code 0 quando todos os checks passam e exit code 1 quando algum critério falha.
 ## Destruir o RDS
 
 ```bash
@@ -98,5 +100,7 @@ cd assignment_1\task_1\solution_task1\grupo6\joao_vilas\terraform
 ```
 
 ```bash
+cd terraform
+terraform plan -destroy
 terraform destroy
 ```
