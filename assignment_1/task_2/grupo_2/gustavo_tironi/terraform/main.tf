@@ -44,18 +44,70 @@ data "aws_vpc" "default" {
   default = true
 }
 
-# Todas as subnets dessa VPC (RDS exige um grupo com várias AZs).
-data "aws_subnets" "default" {
+# Uma subnet por AZ (RDS exige grupo com várias AZs).
+
+# ========
+# Regiao 1
+# ========
+data "aws_subnets" "private_a" {
   filter {
     name   = "vpc-id"
     values = [data.aws_vpc.default.id]
   }
+  filter {
+    name   = "availability-zone"
+    values = ["us-east-1a"]
+  }
 }
 
-# Nomeia esse conjunto de subnets para o RDS anexar.
+# ========
+# Regiao 2
+# ========
+data "aws_subnets" "private_b" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+  filter {
+    name   = "availability-zone"
+    values = ["us-east-1b"]
+  }
+}
+
+# Route table por subnet — detecta quais têm rota para IGW (públicas).
+data "aws_route_table" "private_a" {
+  for_each  = toset(data.aws_subnets.private_a.ids)
+  subnet_id = each.value
+}
+
+data "aws_route_table" "private_b" {
+  for_each  = toset(data.aws_subnets.private_b.ids)
+  subnet_id = each.value
+}
+
+locals {
+  # Subnets sem rota 0.0.0.0/0 para IGW (privadas de verdade).
+  subnet_a = sort([
+    for sid, rt in data.aws_route_table.private_a : sid
+    if !anytrue([for r in rt.routes : startswith(coalesce(r.gateway_id, ""), "igw-")])
+  ])[0]
+
+  subnet_b = sort([
+    for sid, rt in data.aws_route_table.private_b : sid
+    if !anytrue([for r in rt.routes : startswith(coalesce(r.gateway_id, ""), "igw-")])
+  ])[0]
+}
+
+# Subnet Glue
+data "aws_subnet" "glue" {
+  id = local.subnet_a
+}
+
+
+# Subnet RDS
 resource "aws_db_subnet_group" "lab" {
   name       = "lab-mysql-subnets"
-  subnet_ids = data.aws_subnets.default.ids
+  subnet_ids = [local.subnet_a, local.subnet_b]
 }
 
 #==========================
@@ -118,7 +170,6 @@ variable "s3_bucket_name" {
 
 resource "aws_s3_bucket" "data" {
   bucket = var.s3_bucket_name
-  acl    = "private"
 }
 
 resource "aws_s3_bucket_versioning" "data" {
@@ -256,7 +307,7 @@ resource "aws_vpc_endpoint" "s3" {
   vpc_id            = data.aws_vpc.default.id
   service_name      = "com.amazonaws.us-east-1.s3"
   vpc_endpoint_type = "Gateway"
-  route_table_ids   = concat(data.aws_route_tables.private_a.ids, data.aws_route_tables.private_b.ids)
+  route_table_ids   = distinct([for rt in merge(data.aws_route_table.private_a, data.aws_route_table.private_b) : rt.id])
 }
 
 # ==========================
@@ -296,7 +347,7 @@ resource "aws_glue_connection" "rds_conn" {
 
   physical_connection_requirements {
     availability_zone      = data.aws_subnet.glue.availability_zone
-    subnet_id              = sort(data.aws_subnets.private_a.ids)[0]
+    subnet_id              = local.subnet_a
     security_group_id_list  = [aws_security_group.glue.id]
   }
 }
