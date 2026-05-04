@@ -30,3 +30,20 @@ variable "allowed_mysql_cidr" {
     error_message = "Use um CIDR específico, preferencialmente seu IP público com /32. Não use 0.0.0.0/0."
   }
 }
+
+variable "db_name" {
+  description = "Nome do banco carregado na Task 1"
+  type        = string
+  default     = "classicmodels"
+}
+
+variable "project_prefix" {
+  description = "Prefixo dos recursos da Task 2"
+  type        = string
+  default     = "joao-vilas-task2"
+
+  validation {
+    condition     = can(regex("^[a-z0-9-]+$", var.project_prefix))
+    error_message = "Use apenas letras minúsculas, números e hífen."
+  }
+}
