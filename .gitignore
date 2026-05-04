@@ -1,0 +1,7 @@
+# Local credentials and runtime artifacts
+.env
+assignment_1/task_1/.env
+assignment_1/task_1/rds_connection.json
+__pycache__/
+*.pyc
+.DS_Store
