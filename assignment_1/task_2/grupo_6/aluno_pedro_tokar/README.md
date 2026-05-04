@@ -103,7 +103,8 @@ $ python populate.py
 ```
 
 Se todos os passos tiverem sido executados corretamente, o banco irá estar
-populado. Esse script usa o próprio terraform
+populado. Esse script usa o próprio output do terraform para obter o endpoint
+do banco RDS que foi provisionado.
 
 ## Validação
 
