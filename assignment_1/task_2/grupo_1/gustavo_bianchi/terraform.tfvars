@@ -1,7 +1,0 @@
-aws_region    = "us-east-1"
-db_endpoint   = "classicmodels-instance.cswuziyho5un.us-east-1.rds.amazonaws.com"
-db_username   = "admin"
-db_password   = "SenhaForteBemDificil123456789"
-db_name       = "classicmodels"
-bucket_name   = "classicmodels-datalake-gbianchi-2026"
-sg_name       = "classicmodels-sg"
