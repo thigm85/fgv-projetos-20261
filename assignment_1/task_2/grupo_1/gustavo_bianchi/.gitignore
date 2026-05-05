@@ -4,7 +4,8 @@
 
 terraform.tfstate
 rds_endpoint.txt
-
+terraform.tfstate.backup
+bucket_name.txt
 
 .aws/ 
 __pycache__/

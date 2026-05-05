@@ -48,7 +48,7 @@ resource "aws_glue_connection" "rds_conn" {
     # Pega o endpoint automaticamente da Task 1
     JDBC_CONNECTION_URL = "jdbc:mysql://${data.aws_db_instance.rds.endpoint}/classicmodels"
     USERNAME            = "admin"
-    PASSWORD            = "SenhaForteBemDificil123456789"
+    PASSWORD            =  var.db_password
   }
 
   physical_connection_requirements {
@@ -83,4 +83,10 @@ resource "aws_glue_job" "etl_job" {
 
 output "s3_bucket_name" {
   value = aws_s3_bucket.datalake.bucket
+}
+
+# Exporta o nome do bucket para o Python consumir automaticamente
+resource "local_file" "bucket_name_export" {
+  content  = aws_s3_bucket.datalake.bucket
+  filename = "${path.module}/bucket_name.txt"
 }
