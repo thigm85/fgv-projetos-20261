@@ -1,0 +1,9 @@
+config/.env
+config/db_endpoint.json
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.*
+__pycache__/
+*.pyc
+.venv/
