@@ -4,6 +4,7 @@
 
 terraform.tfstate
 rds_endpoint.txt
+terraform.tfstate.backup
 
 
 .aws/ 
