@@ -1,5 +1,5 @@
 """
-Valida o resultado do ETL (§4.6):
+Valida o resultado do ETL:
   1. Último run do Glue job: SUCCEEDED
   2. Arquivos Parquet existem no S3 para todas as tabelas
   3. fact_orders tem registros e chaves válidas nas dimensões

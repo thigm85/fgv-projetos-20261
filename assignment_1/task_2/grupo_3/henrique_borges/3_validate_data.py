@@ -1,14 +1,6 @@
 """
 Valida o banco classicmodels no RDS: tabelas, contagens mínimas e integridade referencial.
-
-Exit code 0 = aprovado, 1 = reprovado (gap 5: critérios objetivos de aceitação).
-
-Gaps corrigidos vs Task 1:
-  - Critérios objetivos de aprovação/reprovação com exit code (gap 5)
-  - Checagem de integridade referencial (FK orphans) (gap 5)
-  - Logs por etapa com contexto acionável (gap 6)
-  - Validação de variáveis obrigatórias (gap 3)
-  - Conexão encerrada corretamente no finally (gap 4)
+Exit code 0 = aprovado, 1 = reprovado.
 """
 import json
 import os
@@ -56,7 +48,7 @@ EXPECTED_COUNTS = {
     "products":     110,
 }
 
-# Checks de integridade referencial (gap 5)
+# Checks de integridade referencial
 FK_CHECKS = [
     (
         "orders → customers",

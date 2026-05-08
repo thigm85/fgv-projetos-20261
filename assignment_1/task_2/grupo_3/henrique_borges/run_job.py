@@ -1,5 +1,5 @@
 """
-Inicia o Glue ETL job e faz polling até SUCCEEDED ou FAILED (§4.5).
+Inicia o Glue ETL job e faz polling até SUCCEEDED ou FAILED.
 """
 import json
 import os

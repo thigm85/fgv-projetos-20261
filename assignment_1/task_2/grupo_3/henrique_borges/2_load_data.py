@@ -1,14 +1,6 @@
 """
 Carrega o banco classicmodels no RDS provisionado via Terraform.
-
 Lê credenciais do .env e endpoint do pipeline_info.json (gerado por terraform apply).
-
-Gaps corrigidos vs Task 1:
-  - Retry com backoff exponencial na conexão (gap 4)
-  - Transação explícita com commit/rollback (gap 4)
-  - Fechamento garantido de recursos via finally (gap 4)
-  - Logs por etapa com contexto de erro acionável (gap 6)
-  - Validação de variáveis obrigatórias na inicialização (gap 3)
 """
 import json
 import os
@@ -23,7 +15,7 @@ import pymysql.constants.CLIENT
 BASE_DIR = Path(__file__).parent
 load_dotenv(BASE_DIR / ".env")
 
-# --- Configuração (gap 3: sem hardcode, validação de obrigatórias) ---
+# --- Configuração ---
 
 def require_env(name: str) -> str:
     value = os.environ.get(name)
@@ -53,7 +45,7 @@ MAX_RETRIES  = 5
 CONNECT_TIMEOUT = 10
 
 
-# --- Conexão com retry e backoff exponencial (gap 4) ---
+# --- Conexão com retry e backoff exponencial ---
 
 def connect_with_retry() -> pymysql.connections.Connection:
     for attempt in range(1, MAX_RETRIES + 1):
@@ -78,7 +70,7 @@ def connect_with_retry() -> pymysql.connections.Connection:
             time.sleep(wait)
 
 
-# --- Carga com transação (gap 4) ---
+# --- Carga com transação ---
 
 def load_sql(conn: pymysql.connections.Connection) -> None:
     print(f"Lendo SQL de {SQL_PATH}...")
