@@ -1,0 +1,13 @@
+aws_region          = "us-east-1"
+project_prefix      = "g2-sillas-task2"
+db_identifier       = "classicmodels-task2-db"
+db_name             = "classicmodels"
+db_username         = "admin"
+db_password         = "ClassicModels123!"
+db_engine_version   = null
+allowed_cidr        = ""
+glue_job_name       = "classicmodels-etl-job"
+glue_connection_name = "classicmodels-rds-connection"
+create_glue_role    = false
+existing_glue_role_arn = ""
+existing_glue_role_name = "LabRole"
