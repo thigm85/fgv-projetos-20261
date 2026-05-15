@@ -1,0 +1,25 @@
+# ============================================================
+#  terraform.tfvars — preencha com seus valores antes do apply
+#  Gerado automaticamente por setup_tfvars.py
+# ============================================================
+
+region       = "us-east-1"
+project_name = "classicmodels"
+
+# Obtido de rds_credentials.json (gerado pelo 1_provision_rds.py)
+rds_host = "classicmodels-db.XXXXXXXXXXX.us-east-1.rds.amazonaws.com"
+rds_port = 3306
+db_name  = "classicmodels"
+
+# CREDENCIAIS: defina via variáveis de ambiente para não expor no arquivo:
+#   export TF_VAR_db_username="seu_usuario"
+#   export TF_VAR_db_password="sua_senha"
+#
+# Ou descomente as linhas abaixo (não commitar no git):
+# db_username = "..."
+# db_password = "..."
+
+# Configurações do Glue (valores mínimos para o AWS Academy)
+glue_worker_type       = "G.1X"
+glue_number_of_workers = 2
+glue_timeout_minutes   = 60

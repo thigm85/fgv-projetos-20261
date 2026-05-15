@@ -1,0 +1,7 @@
+.env
+rds_credentials.json
+mytemp
+.terraform*
+terraform.tfstate
+terraform.tfvars
+tf_outputs.json
