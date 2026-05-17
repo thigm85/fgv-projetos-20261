@@ -14,12 +14,13 @@
 As credenciais do banco de dados não são hardcoded, e devem ser fornecidas antes
 da execução de qualquer um desses passos.
 
-Para acesso às credenciais pelos scripts python, é necessário colocar elas
-como variáveis de ambiente do seu terminal. Para isso, execute:
+Para acesso às credenciais pelos scripts python, é necessário definir as
+variáveis em um arquivo de ambiente. Na raiz do projeto, crie um arquivo chamado
+`.env` com o seguinte conteúdo:
 
-```bash
-$ export DB_USER="admin_user"
-$ export DB_PASSWORD="sua_senha_segura"
+```env
+DB_USER="admin_user"
+DB_PASSWORD="sua_senha_segura"
 ```
 
 Para que o terraform leia as credenciais, é necessário que elas sejam passadas

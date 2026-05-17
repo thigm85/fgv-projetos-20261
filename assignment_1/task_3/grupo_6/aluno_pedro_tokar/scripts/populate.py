@@ -1,11 +1,14 @@
 import mysql.connector
 from mysql.connector import errorcode
+from dotenv import load_dotenv
 
 import os
 import sys
 import logging
 import time
 import argparse
+
+load_dotenv(".env")
 
 logging.basicConfig(
     level=logging.INFO,
