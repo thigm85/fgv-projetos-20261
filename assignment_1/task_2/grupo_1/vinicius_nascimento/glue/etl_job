@@ -1,0 +1,60 @@
+import sys
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, year, month, dayofmonth
+
+spark = SparkSession.builder.appName("ETL").getOrCreate()
+
+# Substituir pelos dados reais do Glue connection
+jdbc_url = "jdbc:mysql://<RDS-ENDPOINT>:3306/classicmodels"
+properties = {
+    "user": "admin",
+    "password": "Admin1234!"
+}
+
+# Load tabelas
+orders = spark.read.jdbc(jdbc_url, "orders", properties=properties)
+orderdetails = spark.read.jdbc(jdbc_url, "orderdetails", properties=properties)
+customers = spark.read.jdbc(jdbc_url, "customers", properties=properties)
+products = spark.read.jdbc(jdbc_url, "products", properties=properties)
+
+# FACT
+fact_orders = orderdetails.join(orders, "orderNumber") \
+    .withColumn("sales_amount", col("quantityOrdered") * col("priceEach")) \
+    .select(
+        col("orderNumber").alias("order_id"),
+        col("productCode").alias("product_id"),
+        col("quantityOrdered").alias("quantity_ordered"),
+        col("priceEach").alias("price_each"),
+        col("sales_amount")
+    )
+
+# DIM CUSTOMERS
+dim_customers = customers.select(
+    col("customerNumber").alias("customer_id"),
+    col("customerName").alias("customer_name"),
+    col("contactLastName").alias("contact_name"),
+    col("city"),
+    col("country")
+)
+
+# DIM PRODUCTS
+dim_products = products.select(
+    col("productCode").alias("product_id"),
+    col("productName").alias("product_name"),
+    col("productLine").alias("product_line"),
+    col("productVendor").alias("product_vendor")
+)
+
+# DIM DATES
+dim_dates = orders.select("orderDate").dropDuplicates() \
+    .withColumn("year", year("orderDate")) \
+    .withColumn("month", month("orderDate")) \
+    .withColumn("day", dayofmonth("orderDate"))
+
+# WRITE
+bucket = "s3://<SEU-BUCKET>/"
+
+fact_orders.write.mode("overwrite").parquet(bucket + "fact_orders/")
+dim_customers.write.mode("overwrite").parquet(bucket + "dim_customers/")
+dim_products.write.mode("overwrite").parquet(bucket + "dim_products/")
+dim_dates.write.mode("overwrite").parquet(bucket + "dim_dates/")
