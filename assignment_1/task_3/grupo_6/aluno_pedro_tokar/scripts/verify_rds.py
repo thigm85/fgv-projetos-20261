@@ -1,40 +1,25 @@
 import mysql.connector
 from mysql.connector import errorcode
 import os
-import json
-import subprocess
 import sys
+import argparse
 import logging
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-def get_db_endpoint():
-    try:
-        result = subprocess.run(
-            ["terraform", "output", "-json"],
-            capture_output=True, text=True, check=True, cwd="terraform_config"
-        )
-        outputs = json.loads(result.stdout)
-        endpoint = outputs.get("db_endpoint", {}).get("value")
-        if not endpoint:
-            logging.error("Output 'db_endpoint' nao encontrado.")
-            sys.exit(1)
-        return endpoint.split(":")[0]
-    except Exception as e:
-        logging.error(f"Erro ao ler output do Terraform: {e}")
-        sys.exit(1)
+parser = argparse.ArgumentParser()
+parser.add_argument("--endpoint_url", required=True, help="Endpoint de conexao do banco")
+args = parser.parse_args()
 
 config = {
     "user": os.environ.get("DB_USER", "admin_user"),
     "password": os.environ.get("DB_PASSWORD"),
-    "host": get_db_endpoint(),
+    "host": args.endpoint_url.split(":")[0],
     "database": "classicmodels",
     "ssl_ca": "./global-bundle.pem",
     "ssl_verify_cert": True,
     "use_pure": True
 }
-
-
 
 thresholds = {
     "customers": 122,

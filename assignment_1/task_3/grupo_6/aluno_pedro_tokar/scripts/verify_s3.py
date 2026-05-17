@@ -2,29 +2,14 @@ import boto3
 import pandas as pd
 import io
 import sys
-import json
-import subprocess
+import argparse
 import logging
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-def get_s3_bucket():
-    try:
-        result = subprocess.run(
-            ["terraform", "output", "-json"],
-            capture_output=True, text=True, check=True, cwd="terraform_config"
-        )
-        outputs = json.loads(result.stdout)
-        bucket = outputs.get("datalake_bucket", {}).get("value")
-        
-        if not bucket:
-            logging.error("Output \"datalake_bucket\" nao encontrado. Garanta que adicionou o output no main.tf e rodou o Terraform.")
-            sys.exit(1)
-            
-        return bucket
-    except Exception as e:
-        logging.error(f"Erro ao ler output do Terraform: {e}")
-        sys.exit(1)
+parser = argparse.ArgumentParser()
+parser.add_argument("--bucket_name", required=True, help="Nome do bucket do S3")
+args = parser.parse_args()
 
 def read_parquet_from_s3(s3_client, bucket, prefix):
     response = s3_client.list_objects_v2(Bucket=bucket, Prefix=prefix)
@@ -43,7 +28,7 @@ def read_parquet_from_s3(s3_client, bucket, prefix):
     return pd.concat(dfs, ignore_index=True)
 
 def validate_data_lake():
-    bucket_name = get_s3_bucket()
+    bucket_name = args.bucket_name
     s3 = boto3.client("s3")
     
     logging.info(f"Conectando ao bucket Data Lake: {bucket_name}")

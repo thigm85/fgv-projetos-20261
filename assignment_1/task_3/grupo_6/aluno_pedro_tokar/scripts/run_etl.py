@@ -1,8 +1,10 @@
 import boto3
+from botocore.exceptions import ClientError
+
 import sys
 import time
 import logging
-from botocore.exceptions import ClientError
+import argparse
 
 # Configuração do logging
 logging.basicConfig(
@@ -59,5 +61,9 @@ def run_glue_job(job_name, region_name="us-east-1"):
         sys.exit(1)
 
 if __name__ == "__main__":
-    JOB_NAME = "classicmodels_etl_to_star_schema"
-    run_glue_job(JOB_NAME)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--job_name", required=True, help="Nome do job do AWS Glue")
+    parser.add_argument("--region_name", default="us-east-1", help="Regiao da AWS")
+    args = parser.parse_args()
+
+    run_glue_job(args.job_name, args.region_name)
