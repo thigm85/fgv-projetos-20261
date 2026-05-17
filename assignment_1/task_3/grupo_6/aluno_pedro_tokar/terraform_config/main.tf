@@ -136,6 +136,7 @@ resource "aws_glue_job" "etl_job" {
 
   default_arguments = {
     "--TARGET_S3_PATH" = "s3://${aws_s3_bucket.datalake_bucket.id}/output/"
+    "--GLUE_DATABASE"  = aws_glue_catalog_database.analytics_db.name
   }
 
   glue_version      = "4.0"
@@ -148,6 +149,37 @@ resource "aws_vpc_endpoint" "s3_endpoint" {
   service_name      = "com.amazonaws.${data.aws_region.current.name}.s3"
   vpc_endpoint_type = "Gateway"
   route_table_ids   = data.aws_route_tables.default.ids
+}
+
+/* Cria o banco de dados lógico no Glue Data Catalog para o schema estrela
+O S3 simplesmente armazena os arquivos parquet, então é necessário ter alguma
+forma do Athena saber que esses arquivos correspondem a um schema estrela,
+e é esse glue catalog que faz isso*/
+resource "aws_glue_catalog_database" "analytics_db" {
+  name        = "classicmodels_analytics"
+  description = "Dados analíticos em esquema estrela baseados no banco de produção"
+}
+
+/* Cria um bucket S3 isolado apenas para salvar os resultados das queries do Athena */
+resource "aws_s3_bucket" "athena_results" {
+  bucket_prefix = "classicmodels-athena-results-"
+  
+  /* Permite destruir o bucket via terraform destroy mesmo se tiver arquivos, 
+     bom já que esses dados são auxiliares e não parte do datalake em si */
+  force_destroy = true 
+}
+
+/* Cria o Workgroup do Athena configurado para usar o bucket de resultados */
+resource "aws_athena_workgroup" "analytics_wg" {
+  name = "analytics_workgroup"
+
+  configuration {
+    result_configuration {
+      output_location = "s3://${aws_s3_bucket.athena_results.id}/output/"
+    }
+  }
+
+  force_destroy = true
 }
 
 /* Define o nome do endpoint do RDS como output do terraform, bom para permitir
@@ -163,3 +195,17 @@ output "datalake_bucket" {
   description = "O nome do bucket do Data Lake"
   value       = aws_s3_bucket.datalake_bucket.id
 }
+
+/* Define o nome da database do glue como output, bom para ler do notebook
+de dashboard depois */
+output "glue_database_name" {
+  description = "Nome do banco de dados no Glue Catalog"
+  value       = aws_glue_catalog_database.analytics_db.name
+}
+/* Define o nome do workgroup do athena como output, bom para ler do notebook
+de dashboard depois */
+output "athena_workgroup_name" {
+  description = "Nome do Workgroup do Athena"
+  value       = aws_athena_workgroup.analytics_wg.name
+}
+

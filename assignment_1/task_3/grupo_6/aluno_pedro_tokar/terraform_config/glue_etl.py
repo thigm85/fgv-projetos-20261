@@ -1,12 +1,13 @@
 import sys
 from awsglue.transforms import *
+from awsglue.dynamicframe import DynamicFrame
 from awsglue.utils import getResolvedOptions
 from pyspark.context import SparkContext
 from awsglue.context import GlueContext
 from awsglue.job import Job
 from pyspark.sql.functions import col, year, quarter, month, dayofmonth
 
-args = getResolvedOptions(sys.argv, ["JOB_NAME", "TARGET_S3_PATH"])
+args = getResolvedOptions(sys.argv, ["JOB_NAME", "TARGET_S3_PATH", "GLUE_DATABASE"])
 sc = SparkContext()
 glueContext = GlueContext(sc)
 spark = glueContext.spark_session
@@ -14,6 +15,7 @@ job = Job(glueContext)
 job.init(args["JOB_NAME"], args)
 
 output_path = args["TARGET_S3_PATH"]
+glue_db = args["GLUE_DATABASE"]
 db_table_prefix = "classicmodels."
 
 def read_mysql_table(table_name):
@@ -87,7 +89,19 @@ fact_orders = fact_orders.select(
 )
 
 def write_parquet(df, folder_name):
-    df.write.mode("overwrite").parquet(f"{output_path}{folder_name}/")
+    dyf = DynamicFrame.fromDF(df, glueContext, "dyf_" + folder_name)
+    
+    sink = glueContext.getSink(
+        path=output_path + folder_name + "/",
+        connection_type="s3",
+        updateBehavior="UPDATE_IN_DATABASE",
+        partitionKeys=[],
+        enableUpdateCatalog=True,
+        transformation_ctx="ctx_" + folder_name
+    )
+    sink.setFormat("glueparquet")
+    sink.setCatalogInfo(catalogDatabase=glue_db, catalogTableName=folder_name)
+    sink.writeFrame(dyf)
 
 write_parquet(fact_orders, "fact_orders")
 write_parquet(dim_customers, "dim_customers")

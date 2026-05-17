@@ -185,3 +185,14 @@ dimensões mapeadas.
    - `dim_dates/`
    - `dim_countries/`
 - Entre em qualquer uma dessas pastas e verifique se há arquivos gerados com a extensão `.parquet`.
+
+## Dashboard analítico
+
+Com todos os passos e scripts executados, o data lake estará pronto para análises. Uma entrada é criada no 
+catálogo de dados do AWS Glue, e pode ser acessada por diversas ferramentas de análise, incluindo o Amazon Athena.
+O notebook [`dashboard.ipynb`](./dashboard.ipynb) contém um dashboard de exemplo que lê desses dados.
+
+Esse notebook foi pensado para ser executado no mesmo ambiente em que o terraform foi executado, e usa o
+comando `terraform output` para obter dados da infraestrutura na AWS. É necessário sobreescrever esses dados
+no notebook caso o ambiente do terraform não esteja disponível. O notebook depende das bibliotecas listadas
+no arquivo `requirements.txt` para executar corretamente.
