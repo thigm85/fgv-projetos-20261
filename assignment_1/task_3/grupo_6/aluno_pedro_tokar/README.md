@@ -99,7 +99,7 @@ com o ambiente virtual configurado, basta rodar o script python que irá enviar
 as instruções SQL para o banco:
 
 ```bash
-$ python populate.py
+$ python scripts/populate.py
 ```
 
 Se todos os passos tiverem sido executados corretamente, o banco irá estar
@@ -112,7 +112,7 @@ Para verificar se tudo está certo, basta executar (com o mesmo ambiente virtual
 o script de verificação:
 
 ```bash
-$ python verify.py
+$ python scripts/verify_rds.py
 ```
 
 Se tudo estiver certo, todas as tabelas terão entradas.
@@ -128,7 +128,7 @@ Para disparar o pipeline e monitorar o progresso em tempo real direto de um
 terminal em sua máquina local, execute o script `run_etl.py`:
 
 ```bash
-$ python run_etl.py
+$ python scripts/run_etl.py
 ```
 
 Este script inicializa o cliente do AWS Glue, dispara o job
@@ -155,7 +155,7 @@ Após o Job do AWS Glue finalizar com o status "Succeeded", você pode validar s
 Execute o script `verify_s3.py` para realizar uma varredura completa e programática sobre os dados salvos no S3:
 
 ```Bash
-$ python verify_s3.py
+$ python scripts/verify_s3.py
 ```
 
 Este script automatiza as checagens baseadas nos seguintes critérios de

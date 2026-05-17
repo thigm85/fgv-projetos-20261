@@ -103,8 +103,8 @@ resource "aws_s3_bucket" "datalake_bucket" {
 resource "aws_s3_object" "glue_script" {
   bucket = aws_s3_bucket.datalake_bucket.id
   key    = "scripts/glue_etl.py"
-  source = "../glue_etl.py"
-  etag   = filemd5("../glue_etl.py")
+  source = "./glue_etl.py"
+  etag   = filemd5("./glue_etl.py")
 }
 
 /* define como o glue vai ler o banco, formatando uma string para conexão com
