@@ -1,0 +1,5 @@
+awswrangler 
+pandas 
+seaborn 
+ipywidgets 
+matplotlib
