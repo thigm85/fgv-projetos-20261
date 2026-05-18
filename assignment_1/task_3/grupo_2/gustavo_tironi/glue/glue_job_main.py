@@ -106,7 +106,10 @@ dim_products = products.join(productlines, "productLine", "left").select(
     F.col("productVendor").alias("product_vendor"),
 )
 
-# dim_countries — distinct countries with territory via customers→employees→offices
+# dim_countries — one row per country (country is the natural PK).
+# Territory comes from the sales rep's office, so a country with customers served
+# by reps from multiple offices/territories would otherwise produce duplicate rows.
+# Aggregate to first non-null territory per country.
 log("building dim_countries")
 dim_countries = customers.join(
     employees.select("employeeNumber", "officeCode"),
@@ -116,7 +119,9 @@ dim_countries = customers.join(
     offices.select("officeCode", "territory"),
     "officeCode",
     "left",
-).select("country", "territory").distinct().withColumn(
+).groupBy("country").agg(
+    F.first("territory", ignorenulls=True).alias("territory"),
+).withColumn(
     "country_key", F.md5(F.col("country"))
 )
 
