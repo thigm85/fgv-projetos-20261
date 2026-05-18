@@ -1,6 +1,13 @@
 # Replace values before running terraform apply
 
-senha_master = "SenhaMuitoForte123"
-meu_ip       = "203.0.113.44"
-s3_bucket_name = "lab-classicmodels-youracct-dev-20260504"
-glue_job_name  = "classicmodels-etl-job"
+# Senha do admin do RDS. RDS não aceita @, / nem aspas.
+senha_master = "SenhaForteSemArroba"
+
+# CIDR liberado no SG do RDS (porta 3306). Deixe vazio para auto-detect
+# do IP público via https://checkip.amazonaws.com/ ou fixe "x.x.x.x/32".
+allowed_cidr = ""
+s3_bucket_name = "lab-classicmodels-SEU_NOME-20260518"
+glue_job_name = "classicmodels-etl-job"
+
+# IAM role do Glue. Default = LabRole (já existe no ambiente do lab).
+# glue_role_name = "LabRole"
