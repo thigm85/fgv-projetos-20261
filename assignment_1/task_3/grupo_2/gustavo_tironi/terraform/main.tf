@@ -94,26 +94,10 @@ locals {
 # Security groups separados — RDS e Glue
 #==========================
 
-resource "aws_security_group" "mysql" {
-  name        = "lab-mysql-sg"
-  description = "MySQL (3306): meu IP + self (Glue ENIs)"
+resource "aws_security_group" "rds" {
+  name        = "lab-mysql-rds-sg"
+  description = "RDS MySQL access"
   vpc_id      = data.aws_vpc.default.id
-
-  # Acesso do meu IP (cliente MySQL local).
-  ingress {
-    from_port   = 3306
-    to_port     = 3306
-    protocol    = "tcp"
-    cidr_blocks = ["${var.meu_ip}/32"]
-  }
-
-  # Self-reference: ENIs do Glue usam esse mesmo SG e falam entre si.
-  ingress {
-    from_port = 0
-    to_port   = 0
-    protocol  = "-1"
-    self      = true
-  }
 
   egress {
     from_port   = 0
@@ -121,6 +105,49 @@ resource "aws_security_group" "mysql" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+}
+
+resource "aws_security_group" "glue" {
+  name        = "lab-glue-sg"
+  description = "Glue job networking"
+  vpc_id      = data.aws_vpc.default.id
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_security_group_rule" "rds_local_ingress" {
+  type              = "ingress"
+  from_port         = 3306
+  to_port           = 3306
+  protocol          = "tcp"
+  security_group_id = aws_security_group.rds.id
+  cidr_blocks       = [local.allowed_cidr]
+  description       = "Local MySQL access"
+}
+
+resource "aws_security_group_rule" "glue_self_ingress" {
+  type                     = "ingress"
+  from_port                = 0
+  to_port                  = 65535
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.glue.id
+  source_security_group_id = aws_security_group.glue.id
+  description              = "Glue self-referencing networking"
+}
+
+resource "aws_security_group_rule" "rds_from_glue" {
+  type                     = "ingress"
+  from_port                = 3306
+  to_port                  = 3306
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.rds.id
+  source_security_group_id = aws_security_group.glue.id
+  description              = "Glue to MySQL"
 }
 
 #==========================
