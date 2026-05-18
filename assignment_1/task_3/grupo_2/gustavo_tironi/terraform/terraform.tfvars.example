@@ -1,0 +1,6 @@
+# Replace values before running terraform apply
+
+senha_master = "SenhaMuitoForte123"
+meu_ip       = "203.0.113.44"
+s3_bucket_name = "lab-classicmodels-youracct-dev-20260504"
+glue_job_name  = "classicmodels-etl-job"
