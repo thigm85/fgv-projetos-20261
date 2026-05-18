@@ -8,6 +8,10 @@ terraform {
       source  = "hashicorp/local"
       version = "~> 2.4"
     }
+    http = {
+      source  = "hashicorp/http"
+      version = "~> 3.4"
+    }
   }
 }
 
@@ -30,9 +34,10 @@ variable "senha_master" {
   sensitive   = true
 }
 
-variable "meu_ip" {
+variable "allowed_cidr" {
   type        = string
-  description = "Seu IP público para liberar a porta 3306 (só você). Ex: 203.0.113.44 — use curl -s https://checkip.amazonaws.com"
+  description = "CIDR allowed for MySQL (3306). Leave empty to auto-detect public IP."
+  default     = ""
 }
 
 variable "s3_bucket_name" {
@@ -44,6 +49,12 @@ variable "glue_job_name" {
   type        = string
   description = "Name for the Glue job"
   default     = "classicmodels-etl-job"
+}
+
+variable "glue_role_name" {
+  type        = string
+  description = "IAM role name used by Glue (looked up, not created)."
+  default     = "LabRole"
 }
 
 #==========================
@@ -68,7 +79,19 @@ resource "aws_db_subnet_group" "lab" {
 }
 
 #==========================
-# Security group único — RDS + Glue
+# Public IP auto-detect + CIDR fallback
+#==========================
+
+data "http" "public_ip" {
+  url = "https://checkip.amazonaws.com/"
+}
+
+locals {
+  allowed_cidr = var.allowed_cidr != "" ? var.allowed_cidr : "${trimspace(data.http.public_ip.response_body)}/32"
+}
+
+#==========================
+# Security groups separados — RDS e Glue
 #==========================
 
 resource "aws_security_group" "mysql" {
@@ -117,7 +140,7 @@ resource "aws_db_instance" "mysql" {
   password = var.senha_master
 
   db_subnet_group_name   = aws_db_subnet_group.lab.name
-  vpc_security_group_ids = [aws_security_group.mysql.id]
+  vpc_security_group_ids = [aws_security_group.rds.id]
 
   publicly_accessible = true
 
@@ -136,10 +159,12 @@ resource "aws_s3_bucket" "data" {
 # IAM — usa LabRole da conta via caller identity (nao criamos pq o lab nao deixa)
 # ==========================
 
-data "aws_caller_identity" "current" {}
+data "aws_iam_role" "glue" {
+  name = var.glue_role_name
+}
 
 locals {
-  glue_role_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/LabRole"
+  glue_role_arn = data.aws_iam_role.glue.arn
 }
 
 # ==========================
@@ -152,7 +177,7 @@ resource "aws_secretsmanager_secret" "db_secret" {
 }
 
 resource "aws_secretsmanager_secret_version" "db_secret_version" {
-  secret_id     = aws_secretsmanager_secret.db_secret.id
+  secret_id = aws_secretsmanager_secret.db_secret.id
   secret_string = jsonencode({
     username = "admin",
     password = var.senha_master,
@@ -194,6 +219,26 @@ resource "aws_vpc_endpoint" "s3" {
   route_table_ids = [data.aws_route_table.main.id]
 }
 
+# Interface endpoint para Secrets Manager via VPC
+resource "aws_vpc_endpoint" "secretsmanager" {
+  vpc_id              = data.aws_vpc.default.id
+  service_name        = "com.amazonaws.us-east-1.secretsmanager"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = data.aws_subnets.rds_az.ids
+  security_group_ids  = [aws_security_group.glue.id]
+  private_dns_enabled = true
+}
+
+resource "aws_security_group_rule" "glue_https_self" {
+  type                     = "ingress"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.glue.id
+  source_security_group_id = aws_security_group.glue.id
+  description              = "HTTPS to VPC interface endpoints"
+}
+
 resource "aws_glue_connection" "rds_conn" {
   name            = "classicmodels-jdbc-conn"
   connection_type = "JDBC"
@@ -206,7 +251,7 @@ resource "aws_glue_connection" "rds_conn" {
   physical_connection_requirements {
     availability_zone      = aws_db_instance.mysql.availability_zone
     subnet_id              = sort(data.aws_subnets.rds_az.ids)[0]
-    security_group_id_list = [aws_security_group.mysql.id]
+    security_group_id_list = [aws_security_group.glue.id]
   }
 }
 
@@ -223,6 +268,8 @@ resource "aws_glue_job" "etl" {
   role_arn = local.glue_role_arn
 
   glue_version      = "4.0"
+  max_retries       = 0
+  timeout           = 10
   number_of_workers = 2
   worker_type     = "G.1X"
 
@@ -240,6 +287,7 @@ resource "aws_glue_job" "etl" {
     "--S3_BUCKET"                        = aws_s3_bucket.data.bucket
     "--job-language"                     = "python"
     "--enable-continuous-cloudwatch-log" = "true"
+    "--enable-glue-datacatalog"          = "true"
   }
 
   depends_on = [aws_s3_object.glue_script]
