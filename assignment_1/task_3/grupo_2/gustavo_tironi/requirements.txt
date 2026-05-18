@@ -1,2 +1,14 @@
+# Task 1 — load + validate RDS
 mysql-connector-python
 boto3
+
+# Task 2 — validate ETL (Parquet do S3)
+pandas
+pyarrow
+
+# Task 3 — Athena + dashboard Jupyter
+awswrangler
+seaborn
+matplotlib
+ipywidgets
+jupyterlab

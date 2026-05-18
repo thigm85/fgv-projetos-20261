@@ -1,12 +1,33 @@
+# ── Terraform ──
 .terraform/
+.terraform.lock.hcl
 *.tfstate
 *.tfstate.*
+tfplan
+*.tfplan
 crash.log
 override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
 terraform.tfvars
-*.pem
-.venv
+
+# ── Secrets / env ──
 .env
+.env.local
+*.pem
+
+# ── Python ──
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# ── Jupyter ──
+.ipynb_checkpoints/
+
+# ── OS / IDE ──
+.DS_Store
+.vscode/
+.idea/
