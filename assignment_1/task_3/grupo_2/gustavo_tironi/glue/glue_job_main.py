@@ -14,8 +14,8 @@ def log(msg):
 
 
 log("STAGE 0 — resolving job args")
-args = getResolvedOptions(sys.argv, ["JOB_NAME", "SECRET_ARN", "S3_BUCKET"])
-log(f"JOB_NAME={args['JOB_NAME']} S3_BUCKET={args['S3_BUCKET']}")
+args = getResolvedOptions(sys.argv, ["JOB_NAME", "SECRET_ARN", "S3_BUCKET", "CATALOG_DATABASE"])
+log(f"JOB_NAME={args['JOB_NAME']} S3_BUCKET={args['S3_BUCKET']} CATALOG_DATABASE={args['CATALOG_DATABASE']}")
 
 log("STAGE 1 — init Spark / GlueContext")
 sc = SparkContext()
@@ -154,22 +154,38 @@ log("STAGE 4 done — transforms defined (lazy)")
 
 
 # ── load ──────────────────────────────────────────────────────────────────────
-log("STAGE 5 — write parquet to S3")
+log("STAGE 5 — write parquet to S3 + register Glue Catalog")
+
+from awsglue.dynamicframe import DynamicFrame
+
+CATALOG_DB = args["CATALOG_DATABASE"]
 
 
-def write_parquet(df, name):
+def write_catalog(df, name):
+    """Escreve Parquet em S3 e registra/atualiza tabela no Glue Catalog num passo."""
     t0 = time.time()
-    log(f"  writing {name} ...")
-    df.write.mode("overwrite").parquet(f"{S3}/{name}/")
+    log(f"  writing {name} → s3 + catalog ({CATALOG_DB}.{name}) ...")
+    dyf = DynamicFrame.fromDF(df, glueContext, name)
+    sink = glueContext.getSink(
+        path=f"{S3}/{name}/",
+        connection_type="s3",
+        updateBehavior="UPDATE_IN_DATABASE",
+        partitionKeys=[],
+        enableUpdateCatalog=True,
+        transformation_ctx=f"sink_{name}",
+    )
+    sink.setCatalogInfo(catalogDatabase=CATALOG_DB, catalogTableName=name)
+    sink.setFormat("glueparquet")
+    sink.writeFrame(dyf)
     log(f"  wrote {name} elapsed={time.time()-t0:.1f}s")
 
 
-write_parquet(fact_orders, "fact_orders")
-write_parquet(dim_customers, "dim_customers")
-write_parquet(dim_products, "dim_products")
-write_parquet(dim_dates, "dim_dates")
-write_parquet(dim_countries, "dim_countries")
-log("STAGE 5 done — all outputs written")
+write_catalog(fact_orders, "fact_orders")
+write_catalog(dim_customers, "dim_customers")
+write_catalog(dim_products, "dim_products")
+write_catalog(dim_dates, "dim_dates")
+write_catalog(dim_countries, "dim_countries")
+log("STAGE 5 done — Parquet + Catalog atualizados")
 
 log("STAGE 6 — job.commit()")
 job.commit()
