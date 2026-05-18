@@ -282,7 +282,84 @@ resource "aws_glue_connection" "rds_conn" {
   }
 }
 
+# ==========================
+# Glue Catalog — database para tabelas analíticas
+#
+# Caminho principal: o próprio Glue job registra/atualiza as tabelas no
+# Catalog via sink.enableUpdateCatalog=True (atomic com a escrita Parquet).
+#
+# O crawler abaixo é FALLBACK MANUAL — não roda em schedule, só é
+# disparado on-demand caso o job falhe em registrar tabelas (ex: schema
+# drift, mudança no sink). Não depender dele em fluxo normal.
+# ==========================
+
+resource "aws_glue_catalog_database" "analytics" {
+  name = "classicmodels_analytics"
+}
+
+# FALLBACK ONLY — não executar em fluxo normal.
+# Uso manual: aws glue start-crawler --name classicmodels-fallback-crawler
+resource "aws_glue_crawler" "fallback" {
+  name          = "classicmodels-fallback-crawler"
+  description   = "FALLBACK ONLY — usar apenas se o Glue job falhar em registrar tabelas no Catalog. Fluxo normal: job escreve direto via enableUpdateCatalog."
+  database_name = aws_glue_catalog_database.analytics.name
+  role          = local.glue_role_arn
+
+  s3_target {
+    path = "s3://${aws_s3_bucket.data.bucket}/data/"
+  }
+
+  schema_change_policy {
+    update_behavior = "UPDATE_IN_DATABASE"
+    delete_behavior = "DEPRECATE_IN_DATABASE"
+  }
+
+  # Sem schedule — disparo manual apenas.
+}
+
+# ==========================
+# Athena — bucket dedicado para resultados + workgroup
+# ==========================
+
+resource "aws_s3_bucket" "athena_results" {
+  bucket        = "${var.s3_bucket_name}-athena-results"
+  force_destroy = true
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "athena_results" {
+  bucket = aws_s3_bucket.athena_results.id
+
+  rule {
+    id     = "expire-old-results"
+    status = "Enabled"
+
+    filter {}
+
+    expiration {
+      days = 7
+    }
+  }
+}
+
+resource "aws_athena_workgroup" "lab" {
+  name          = "classicmodels-lab"
+  description   = "Workgroup do laboratório Task 3 — consultas analíticas classicmodels."
+  state         = "ENABLED"
+  force_destroy = true
+
+  configuration {
+    enforce_workgroup_configuration    = true
+    publish_cloudwatch_metrics_enabled = false
+
+    result_configuration {
+      output_location = "s3://${aws_s3_bucket.athena_results.bucket}/results/"
+    }
+  }
+}
+
+# ====================================
 # Upload ETL script to S3
+# ====================================
 resource "aws_s3_object" "glue_script" {
   bucket = aws_s3_bucket.data.id
   key    = "scripts/glue_job_main.py"
@@ -298,11 +375,11 @@ resource "aws_glue_job" "etl" {
   max_retries       = 0
   timeout           = 10
   number_of_workers = 2
-  worker_type     = "G.1X"
+  worker_type       = "G.1X"
 
   command {
-    name         = "glueetl"
-    python_version = "3"
+    name            = "glueetl"
+    python_version  = "3"
     script_location = "s3://${aws_s3_bucket.data.bucket}/scripts/glue_job_main.py"
   }
 
@@ -312,6 +389,7 @@ resource "aws_glue_job" "etl" {
     "--TempDir"                          = "s3://${aws_s3_bucket.data.bucket}/tmp/"
     "--SECRET_ARN"                       = aws_secretsmanager_secret.db_secret.arn
     "--S3_BUCKET"                        = aws_s3_bucket.data.bucket
+    "--CATALOG_DATABASE"                 = aws_glue_catalog_database.analytics.name
     "--job-language"                     = "python"
     "--enable-continuous-cloudwatch-log" = "true"
     "--enable-glue-datacatalog"          = "true"
@@ -342,6 +420,21 @@ output "secret_arn" {
   value = aws_secretsmanager_secret.db_secret.arn
 }
 
+output "athena_workgroup" {
+  value       = aws_athena_workgroup.lab.name
+  description = "Athena workgroup name para uso no notebook"
+}
+
+output "athena_results_bucket" {
+  value       = aws_s3_bucket.athena_results.bucket
+  description = "Bucket S3 com resultados de query Athena"
+}
+
+output "glue_database" {
+  value       = aws_glue_catalog_database.analytics.name
+  description = "Glue/Athena database com tabelas analíticas"
+}
+
 #==========================
 # Grava src/.env
 #==========================
@@ -349,5 +442,14 @@ output "secret_arn" {
 resource "local_file" "env" {
   filename        = "${path.module}/../src/.env"
   file_permission = "0600"
-  content         = "SECRET_ARN=${aws_secretsmanager_secret.db_secret.arn}\nS3_BUCKET=${aws_s3_bucket.data.bucket}\nGLUE_JOB_NAME=${var.glue_job_name}\n"
+  content = join("\n", [
+    "SECRET_ARN=${aws_secretsmanager_secret.db_secret.arn}",
+    "S3_BUCKET=${aws_s3_bucket.data.bucket}",
+    "GLUE_JOB_NAME=${var.glue_job_name}",
+    "GLUE_DATABASE=${aws_glue_catalog_database.analytics.name}",
+    "ATHENA_WORKGROUP=${aws_athena_workgroup.lab.name}",
+    "ATHENA_RESULTS_BUCKET=${aws_s3_bucket.athena_results.bucket}",
+    "ATHENA_OUTPUT_LOCATION=s3://${aws_s3_bucket.athena_results.bucket}/results/",
+    "",
+  ])
 }
