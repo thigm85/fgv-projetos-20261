@@ -1,111 +1,59 @@
-## O que precisamos declarar
+# Terraform — Infraestrutura do laboratório
 
-| Recurso | Função / Observação |
-|---------|---------------------|
-| `provider "aws"` | Define a região (e, opcionalmente, o perfil a ser usado). |
-| `aws_db_subnet_group` | Obrigatório pela AWS: indica em quais sub-redes (AZs) o RDS pode ficar. |
-| `aws_security_group` | Necessário para liberar acesso na porta 3306 para o seu IP. |
-| `aws_db_instance` | Cria a instância MySQL propriamente dita. |
+Provisiona toda a stack AWS necessária para as Tasks 1, 2 e 3:
+RDS MySQL (origem), S3 (data lake), Glue (ETL Spark) e Athena (consultas analíticas).
 
-### Por que security group “personalizado”
+## Visão geral dos recursos
 
-O Security Group default (Firewall) da VPC **não** expõe o RDS para a internet. Então, para acessar pelo meu computador, precisei fazer um Security Group que libera meu IP para acesso.
+| Bloco | Recursos | Função |
+|---|---|---|
+| **Origem (Task 1)** | `aws_db_instance.mysql`, `aws_db_subnet_group.lab`, `aws_security_group.rds` | RDS MySQL `db.t3.micro` com schema `classicmodels`. Acesso liberado para seu IP público (auto-detectado via `checkip.amazonaws.com`). |
+| **Credenciais** | `aws_secretsmanager_secret.db_secret` | JSON com `username/password/host/port/dbname`. Usado pelo Glue job e Connection. |
+| **Data lake (Task 2)** | `aws_s3_bucket.data` | Bucket onde o Glue grava Parquet particionado e o script ETL. |
+| **Rede do Glue** | `aws_security_group.glue` + self-rule, `aws_vpc_endpoint.s3`, `aws_vpc_endpoint.secretsmanager` | Glue precisa de SG self-referencing e endpoints VPC (S3 + Secrets Manager) para rodar dentro da VPC. |
+| **ETL (Task 2)** | `aws_glue_connection.rds_conn`, `aws_glue_job.etl`, `aws_s3_object.glue_script` | Upload do script `glue/glue_job_main.py` para S3 + job Glue 4.0 com 2 workers `G.1X`. |
+| **Catalog (Task 3)** | `aws_glue_catalog_database.analytics`, `aws_glue_crawler.fallback` | Database `classicmodels_analytics`. O job registra tabelas direto via `enableUpdateCatalog`. Crawler é fallback manual. |
+| **Athena (Task 3)** | `aws_athena_workgroup.lab`, `aws_s3_bucket.athena_results` | Workgroup dedicado + bucket separado para resultados (lifecycle de 7 dias). |
+| **Outputs** | `local_file.env` | Grava `src/.env` com todas as variáveis para os scripts Python e o notebook. |
+
+### Decisões de design
+
+- **IAM via `LabRole` existente** (`data.aws_iam_role.glue`) — ambiente acadêmico não permite criar roles. Lookup, não create.
+- **Security groups separados** para RDS e Glue. Glue tem self-referencing rule (Glue ENIs falam entre si) + regra explícita liberando 3306 do SG do Glue para o SG do RDS.
+- **VPC endpoints obrigatórios** — Glue não consegue acessar S3 nem Secrets Manager via internet quando roda dentro da VPC default. S3 vai por gateway endpoint (route table), Secrets Manager por interface endpoint (ENI na mesma AZ do RDS).
+- **AZ matching** — `aws_glue_connection.physical_connection_requirements` precisa da subnet na mesma AZ do RDS, senão o job falha com erro de rede.
+- **Catalog via job, crawler como fallback** — o Glue job usa `sink.enableUpdateCatalog=True` para registrar tabelas atomicamente. Crawler `classicmodels-fallback-crawler` só roda on-demand se schema drift quebrar o sink.
+- **Bucket de resultados separado** com `lifecycle_configuration` (7 dias) para Athena. Mantém o data lake limpo.
 
 ## Como rodar
 
-Pré-requisito: `terraform.tfvars` com `senha_master` e `meu_ip` (IP público, use https://checkip.amazonaws.com/).
-
-**`terraform init`** — baixa o provider e prepara a pasta.
-
-Saída esperada (trecho):
-
-```text
-Initializing the backend...
-
-Initializing provider plugins...
-- Reusing previous version of hashicorp/aws from the dependency lock file
-- Using previously-installed hashicorp/aws v5.100.0
-
-Terraform has been successfully initialized!
+```bash
+terraform init
+terraform plan       # revisão
+terraform apply      # cria tudo
 ```
 
-Vai demorar alguns segundos e então aparecer:
+Tempo total esperado: **~8–12 min** (RDS sozinho leva 5–7 min).
 
-```text
-You may now begin working with Terraform. Try running "terraform plan" to see
-any changes that are required for your infrastructure. All Terraform commands
-should now work.
+Após `apply`, os outputs aparecem no terminal e o arquivo `src/.env` é gerado automaticamente com tudo o que os scripts e o notebook precisam.
 
-If you ever set or change modules or backend configuration for Terraform,
-rerun this command to reinitialize your working directory. If you forget, other
-commands will detect it and remind you to do so if necessary.
+## Fluxo após `apply`
+
+1. **Task 1** — carregar dados no RDS:
+   ```bash
+   python src/load.py && python src/validate.py
+   ```
+2. **Task 2** — executar Glue job (escreve Parquet + registra tabelas no Catalog):
+   ```bash
+   aws glue start-job-run --job-name classicmodels-etl-job
+   python src/validate_etl.py
+   ```
+3. **Task 3** — abrir `notebook/dashboard.ipynb` (consome Athena).
+
+## Cleanup
+
+```bash
+terraform destroy
 ```
 
-**`terraform plan`** — mostra o que será criado/alterado (não muda nada na AWS).
-
-Em conta “vazia” para esse projeto, algo como:
-
-```text
-Terraform will perform the following actions:
-
-  # aws_db_instance.mysql will be created
-  + resource "aws_db_instance" "mysql" {
-      + address                               = (known after apply)
-      ...
-      + engine                                = "mysql"
-      + engine_lifecycle_support              = (known after apply)
-      + engine_version                        = "8.4.7"
-      ...
-      + instance_class                        = "db.t3.micro"
-      ...
-      + username                              = "admin"
-      + vpc_security_group_ids                = (known after apply)
-    }
-
-  # aws_db_subnet_group.lab will be created
-  + resource "aws_db_subnet_group" "lab"
-  ...
-
-  # aws_security_group.mysql will be created
-  + resource "aws_security_group" "mysql"
-  ...
-
-Plan: 3 to add, 0 to change, 0 to destroy.
-
-Changes to Outputs:
-  + endpoint = (known after apply)
-  + porta    = (known after apply)
-  + usuario  = "admin"
-```
-
-
-Observe que o comando `terraform plan` mostra todas as ações que o Terraform pretende executar. Ele apenas exibe as mudanças necessárias, caso algum recurso já exista e esteja correto, ele não será recriado ou modificado.
-
-**`terraform apply`** — cria de fato
-
-Aqui, vai demorar um pouco e a saída esperada é:
-
-```text
-data.aws_vpc.default: Reading...
-data.aws_vpc.default: Read complete after...
-data.aws_subnets.default: Reading...
-data.aws_subnets.default: Read complete after...
-aws_security_group.mysql: Creating...
-aws_security_group.mysql: Creation complete after..
-aws_db_instance.mysql: Creating...
-aws_db_instance.mysql: Still creating...
-...
-#aqui vai demorar um pouco, ta criadno o RDS
-...
-aws_db_instance.mysql: Creation complete
-```
-
-No fim, no terminal aparecem os **outputs**, por exemplo:
-
-```text
-endpoint = "lab-mysql-classicmodels.xxxx.us-east-1.rds.amazonaws.com"
-porta = 3306
-usuario = "admin"
-```
-
-**`terraform destroy`** — remove o que está no state (útil para encerrar o lab e custo).
+Remove RDS, buckets (incluindo `athena_results` via `force_destroy`), Glue job, workgroup, secret e SGs.
