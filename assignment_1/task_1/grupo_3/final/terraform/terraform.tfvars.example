@@ -1,0 +1,22 @@
+region                 = "us-east-1"
+db_instance_identifier = "classicmodels-db"
+db_name                = "classicmodels"
+db_username            = "admin"
+instance_class         = "db.t3.micro"
+
+# Preferivel: defina via PowerShell antes do terraform apply:
+# $env:TF_VAR_db_password = "SUA_SENHA_FORTE_COM_12+_CARACTERES"
+# Alternativa local, sem commitar: descomente a linha abaixo no seu terraform.tfvars.
+# db_password = "SUA_SENHA_FORTE_COM_12+_CARACTERES"
+
+# Seguro por padrao: RDS privado, sem endpoint publico.
+allowed_cidr        = null
+publicly_accessible = false
+deletion_protection = true
+
+# Modo laboratorio local, se voce precisar conectar do seu notebook:
+# 1. descubra seu IP: Invoke-RestMethod https://checkip.amazonaws.com
+# 2. use somente seu IP /32
+# allowed_cidr        = "SEU_IP_PUBLICO/32"
+# publicly_accessible = true
+# deletion_protection = false

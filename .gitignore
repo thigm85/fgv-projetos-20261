@@ -1,0 +1,17 @@
+.aws/
+*.env
+!.env.example
+!**/.env.example
+.terraform/
+**/.terraform/
+**/__pycache__/
+assignment_1\task_1\grupo_3\aluno_paula\terraform\terraform.tfvars
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+*.pyc
+*.hcl
+*.backup
+*.log
+*.tfvars
+*.exe
