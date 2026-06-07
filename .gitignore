@@ -1,0 +1,15 @@
+.aws/credentials
+.env
+terraform.tfvars
+.terraform/
+*.tfstate
+*.tfstate.backup
+__pycache__/
+*.pyc
+venv/
+*.exe
+*.terraform.lock.hcl
+*.terraform.tfstate.lock.info
+*.backup
+assignment_2/task_1/grupo_5/Gabriel/README.md
+assignment_2/task_2/grupo_5/Gabriel/README.md
