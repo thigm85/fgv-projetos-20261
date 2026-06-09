@@ -1,0 +1,6 @@
+# Terraform — estado e segredos nunca commitados
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfstate.lock.info
+terraform.tfvars

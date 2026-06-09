@@ -1,0 +1,16 @@
+# Segredos e config gerada — nunca commitar
+scripts/.env
+scripts/pipeline_info.json
+.env
+pipeline_info.json
+__pycache__/
+
+# Terraform (infra/)
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.backup
+infra/*.tfstate.lock.info
+infra/terraform.tfvars
+
+# Dump completo do banco — não commitar (use o já versionado no A1)
+data/*.sql

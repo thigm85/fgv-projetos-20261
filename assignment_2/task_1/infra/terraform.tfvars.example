@@ -1,0 +1,11 @@
+# Copie para terraform.tfvars e preencha. NÃO commite o terraform.tfvars real.
+aws_access_key_id     = "ASIA..."
+aws_secret_access_key = "..."
+aws_session_token     = "..."
+
+rds_admin_password = "troque_esta_senha_min8chars"
+
+# Opcionais (têm default):
+# aws_region      = "us-east-1"
+# rds_instance_id = "classicmodels-grupo3-a2"
+# rds_admin_user  = "admin"
