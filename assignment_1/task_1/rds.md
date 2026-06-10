@@ -1,3 +1,4 @@
+
 # Um Exemplo do Ciclo de Vida de Engenharia de Dados
 
 Este trabalho é uma adaptação de um exercício presente no curso [Introduction to Data Engineering](https://www.coursera.org/learn/intro-to-data-engineering), que integra o DeepLearning.AI Data Engineering Professional Certificate.
