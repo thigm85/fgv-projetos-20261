@@ -1,0 +1,18 @@
+=== Validation of ETL (Star Schema) ===
+
+1. Checking S3 Parquet Files:
+  [OK] fact_orders loaded successfully with 2996 rows.
+  [OK] dim_customers loaded successfully with 122 rows.
+  [OK] dim_products loaded successfully with 110 rows.
+  [OK] dim_dates loaded successfully with 265 rows.
+  [OK] dim_countries loaded successfully with 34 rows.
+
+2. Validating Business Metrics (fact_orders):
+  [OK] fact_orders contains records.
+  [OK] sales_amount == quantity_ordered * price_each for all records.
+
+3. Validating Referential Integrity (Foreign Keys):
+  [OK] All customer_id in fact_orders exist in dim_customers.
+  [OK] All product_id in fact_orders exist in dim_products.
+  [OK] All order_date_key in fact_orders exist in dim_dates.
+  [OK] All country_key in fact_orders exist in dim_countries.
