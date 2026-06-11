@@ -1,0 +1,23 @@
+=== Incremental Source Validation Report ===
+
+--- Metadata Details ---
+Pipeline Name: classicmodels_sales
+Last Processed Date: 2005-05-31
+Last Run Timestamp: None
+Last Run Status: INITIALIZED
+
+Check 1 & 2 PASSED: Watermark found with date 2005-05-31.
+
+--- Source Volume Details ---
+Total Orders in DB: 336
+Max Order Date in DB: 2005-06-21
+Pending Orders for ETL: 10
+
+Check 3 PASSED: New data detected up to 2005-06-21 (10 pending orders).
+--- Lineage & Integrity Details ---
+Total rows in orderdetails for pending orders: 21
+Orphaned new orders (without details): 0
+
+Check 4 PASSED: All new orders have corresponding details.
+
+Validation SUCCESS: Source is ready for incremental ETL.

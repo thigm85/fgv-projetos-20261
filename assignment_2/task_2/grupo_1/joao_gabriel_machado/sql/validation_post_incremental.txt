@@ -1,0 +1,18 @@
+=== POST-INCREMENTAL ETL VALIDATION REPORT ===
+
+--- Check 1 & 3: RDS Watermark Status ---
+Status do Último Job: SUCCEEDED
+Última Data Processada: 2005-10-04
+Timestamp da Execução: 2026-06-11 15:33:52
+
+✅ SUCESSO: O Glue reportou sucesso e o watermark avançou no banco.
+
+--- Check 2: S3 Partitioning Structure ---
+Partições encontradas no S3: 3
+ - order_year=2005/order_month=9
+ - order_year=2005/order_month=10
+ - order_year=2005/order_month=8
+✅ SUCESSO: Estrutura de pastas particionadas validada no S3.
+
+
+ERRO DURANTE A VALIDAÇÃO: Athena query failed: FAILED: SemanticException [Error 10072]: Database does not exist: classicmodels_star_schema
