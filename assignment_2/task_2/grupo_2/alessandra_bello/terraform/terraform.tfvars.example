@@ -1,0 +1,19 @@
+# terraform/terraform.tfvars.example
+# Copie para terraform.tfvars e preencha os valores reais.
+
+aws_region     = "us-east-1"
+project_prefix = "classicmodels"
+glue_job_name  = "classicmodels-incremental-etl"
+s3_bucket      = "SEU-BUCKET-AQUI"
+
+# ARN da role usada pelo Glue (em labs Academy, geralmente LabRole)
+# Exemplo: arn:aws:iam::123456789012:role/LabRole
+glue_role_arn = "arn:aws:iam::ACCOUNT_ID:role/LabRole"
+
+# Credenciais JDBC — use Secrets Manager em produção
+jdbc_url    = "jdbc:mysql://SEU-RDS-ENDPOINT:3306/classicmodels"
+db_user     = "admin"
+db_password = "SUA-SENHA"
+
+pipeline_name = "classicmodels_sales"
+cron_schedule = "cron(0 12 ? * MON *)"
