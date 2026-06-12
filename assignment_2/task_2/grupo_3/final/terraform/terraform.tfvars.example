@@ -1,0 +1,28 @@
+region      = "us-east-1"
+db_name     = "classicmodels"
+rds_host    = "classicmodels-db.xxxxx.us-east-1.rds.amazonaws.com"
+rds_port    = 3306
+db_username = "admin"
+
+# Preferivel: defina via variavel de ambiente local, sem commitar:
+# PowerShell: $env:TF_VAR_db_password = "sua-senha"
+# Bash/zsh:   export TF_VAR_db_password="sua-senha"
+# Alternativa local: crie terraform.tfvars e descomente a linha abaixo somente fora do git.
+# db_password = "sua-senha"
+
+# Opcional: use um bucket existente/nome fixo, se necessario.
+# etl_bucket_name = "classicmodels-etl-seu-grupo"
+
+# Em AWS Academy/Lab, normalmente use a LabRole existente.
+# existing_glue_role_arn       = "arn:aws:iam::<account-id>:role/LabRole"
+# existing_glue_role_name      = "LabRole"
+# existing_eventbridge_role_arn = "arn:aws:iam::<account-id>:role/LabRole"
+
+# Configure estes campos quando o RDS estiver em VPC privada.
+# glue_subnet_id          = "subnet-xxxxxxxx"
+# glue_security_group_id = "sg-xxxxxxxx"
+# glue_availability_zone = "us-east-1a"
+# glue_vpc_id            = "vpc-xxxxxxxx"
+# glue_route_table_ids   = ["rtb-xxxxxxxx"]
+
+eventbridge_schedule_expression = "cron(0 12 ? * MON *)"
