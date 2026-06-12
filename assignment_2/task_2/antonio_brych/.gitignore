@@ -1,0 +1,12 @@
+.env
+*.env
+!*.env.example
+terraform.tfvars
+terraform.tfstate
+terraform.tfstate.*
+.terraform/
+.terraform.lock.hcl
+__pycache__/
+*.pyc
+*.pyo
+.venv/

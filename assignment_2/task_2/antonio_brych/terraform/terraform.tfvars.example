@@ -1,0 +1,13 @@
+# Required — copy to terraform.tfvars and fill in your values
+rds_host    = "your-rds-endpoint.cluster-xxxxxxxxxx.us-east-1.rds.amazonaws.com"
+db_password = "your-password"
+
+# Optional — uncomment and fill in for VPC-private RDS or to reuse an existing role
+# glue_subnet_id              = "subnet-xxxxxxxxxxxxxxxxx"
+# glue_security_group_id      = "sg-xxxxxxxxxxxxxxxxx"
+# glue_availability_zone      = "us-east-1a"
+# glue_vpc_id                 = "vpc-xxxxxxxxxxxxxxxxx"
+# glue_route_table_ids        = ["rtb-xxxxxxxxxxxxxxxxx"]
+# existing_glue_role_arn      = "arn:aws:iam::123456789012:role/LabRole"
+# existing_glue_role_name     = "LabRole"
+# existing_eventbridge_role_arn = "arn:aws:iam::123456789012:role/LabRole"

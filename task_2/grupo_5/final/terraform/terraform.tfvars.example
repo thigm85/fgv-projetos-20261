@@ -1,0 +1,12 @@
+aws_region   = "us-east-1"
+db_identifier = "classicmodels-db"
+db_username   = "admin"
+db_password   = "SENHA"
+glue_role_arn = "arn:aws:iam::123456789012:role/LabRole"
+glue_subnet_id = "subnet-xxxxxxxxxxxxxxxxx"
+
+# Obrigatório para acesso local ao MySQL: restrinja ao IP público, ex.: ["203.0.113.10/32"]
+allowed_cidr_blocks = ["SEU_IP_PUBLICO/32"]
+
+# Opcional: IDs de outros security groups que devem acessar o MySQL.
+# allowed_security_group_ids = ["sg-xxxxxxxx"]
