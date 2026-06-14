@@ -1,0 +1,5 @@
+.env
+.ipynb_checkpoints/
+.terraform*
+terraform.tfvars
+terraform.tfstate*

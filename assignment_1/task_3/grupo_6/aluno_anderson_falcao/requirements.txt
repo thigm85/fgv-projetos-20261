@@ -1,0 +1,10 @@
+mysql-connector-python>=8.0.0
+python-dotenv>=1.0.0
+awswrangler>=3.0.0
+pandas>=2.0.0
+seaborn>=0.12.0
+matplotlib>=3.7.0
+ipywidgets>=8.0.0
+jupyterlab>=4.0.0
+plotly>=5.0.0
+anywidget>=0.9.0
