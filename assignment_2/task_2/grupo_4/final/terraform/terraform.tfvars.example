@@ -1,0 +1,14 @@
+# Copy to terraform.tfvars (gitignored). Values should match your local .env in the task root.
+
+aws_region = "us-east-1"
+
+rds_db_instance_identifier = "classicmodels-mysql-g4"
+
+db_name     = "classicmodels"
+db_user     = "admin"
+db_password = "SUA_SENHA"
+
+# glue_role_name = "LabRole"
+# eventbridge_enabled = true
+# eventbridge_attach_iam_policy = false  # set true only if your account allows iam:PutRolePolicy
+# glue_schedule_cron = "cron(0 12 ? * MON *)"

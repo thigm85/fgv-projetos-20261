@@ -1,0 +1,7 @@
+.venv/
+venv/
+.ipynb_checkpoints/
+__pycache__/
+results/*
+!results/.gitkeep
+!results/top_products_default.png

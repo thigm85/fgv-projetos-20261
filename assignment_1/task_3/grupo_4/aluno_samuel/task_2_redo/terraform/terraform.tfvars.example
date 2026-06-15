@@ -1,0 +1,9 @@
+aws_region = "us-east-1"
+
+# Same identifier as Task 1 (01_provision_rds.py / RDS_DB_INSTANCE_IDENTIFIER in .env).
+# Terraform resolves the hostname via data.aws_db_instance — do not hardcode rds_endpoint.
+rds_db_instance_identifier = "classicmodels-mysql-g4"
+
+db_name     = "classicmodels"
+db_user     = "admin"
+db_password = "SUA_SENHA" # same as RDS_MASTER_PASSWORD in task_1/grupo_4/aluno_luciano/.env

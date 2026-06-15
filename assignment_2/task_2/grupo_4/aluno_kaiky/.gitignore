@@ -1,0 +1,9 @@
+.env
+terraform/terraform.tfvars
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/*.tfstate.account-*
+terraform/*.tfstate.backup.account-*
+terraform/.terraform/
+terraform/build/
+terraform/fact_orders/*.parquet

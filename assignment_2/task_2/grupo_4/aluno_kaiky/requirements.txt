@@ -1,0 +1,4 @@
+boto3>=1.34
+pyarrow>=14.0
+dotenv
+pymysql
