@@ -1,0 +1,9 @@
+mysql-connector-python
+boto3
+pandas
+pyarrow
+awswrangler
+seaborn
+ipywidgets
+matplotlib
+python-dotenv
