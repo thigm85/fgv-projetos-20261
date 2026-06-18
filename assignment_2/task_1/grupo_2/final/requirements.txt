@@ -1,0 +1,5 @@
+# Assignment 2 — Task 1: Origem incremental e watermark
+# Dependências mínimas
+PyMySQL>=1.1.0
+python-dotenv>=1.0.0
+boto3                    # necessário apenas se usar SECRET_ARN (Secrets Manager)
