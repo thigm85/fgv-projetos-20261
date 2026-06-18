@@ -1,0 +1,12 @@
+.terraform/
+.terraform.lock.hcl
+.terraform.tfstate.lock.info
+
+terraform.tfstate
+rds_endpoint.txt
+terraform.tfstate.backup
+
+
+.aws/ 
+__pycache__/
+*.venv
