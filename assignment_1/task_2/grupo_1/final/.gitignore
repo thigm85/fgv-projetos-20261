@@ -1,0 +1,18 @@
+# Arquivos sensíveis e temporários
+.env
+terraform.tfvars
+terraform.tfstate
+terraform.tfstate.backup
+.terraform/
+rds_config.txt
+
+# Ambiente virtual
+venv/
+
+# Arquivos do macOS
+.DS_Store
+
+# Outros arquivos comuns
+*.log
+__pycache__/
+*.pyc
