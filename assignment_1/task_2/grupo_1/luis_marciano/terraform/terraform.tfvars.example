@@ -1,0 +1,14 @@
+# Exemplo de arquivo terraform.tfvars
+# Copie este arquivo para terraform.tfvars e preencha com seus valores
+
+region           = "us-east-1"
+db_identifier    = "classicmodels-db"
+allocated_storage = 20
+db_name          = "classicmodels"
+engine_version   = "8.0.40"
+instance_class   = "db.t3.micro"
+username         = "admin"
+password         = "SUA_SENHA_SEGURA_AQUI"
+s3_bucket_name   = "classicmodels-data-lake"
+glue_job_name    = "classicmodels-etl"
+glue_database_name = "classicmodels"
