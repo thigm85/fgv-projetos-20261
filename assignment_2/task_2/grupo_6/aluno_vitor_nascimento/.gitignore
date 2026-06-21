@@ -1,0 +1,13 @@
+.venv/
+.env
+
+*.tfvars
+*.tfstate
+*.tfstate.backup
+.terraform
+.terraform.lock.hcl
+
+!*.tfvars.example
+
+.ipynb_checkpoints
+__pycache__/
