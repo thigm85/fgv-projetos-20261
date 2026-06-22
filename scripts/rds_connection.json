@@ -1,0 +1,8 @@
+{
+  "region": "us-east-1",
+  "db_instance_identifier": "classicmodels-db",
+  "db_name": "classicmodels",
+  "host": "classicmodels-db.chvmbwketkts.us-east-1.rds.amazonaws.com",
+  "port": 3306,
+  "username": "admin"
+}
