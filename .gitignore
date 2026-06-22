@@ -1,0 +1,18 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Local virtual environments
+.venv/
+venv/
+
+# Task 3 local secrets and generated envs
+assignment_1/task_3/grupo_5/antonio/.env
+assignment_1/task_3/grupo_5/antonio/.rds.generated.env
+
+# Terraform local artifacts
+**/.terraform/
+**/terraform.tfstate
+**/terraform.tfstate.backup
+**/terraform.tfvars
+**/outputs.json
