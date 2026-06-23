@@ -1,0 +1,4 @@
+boto3
+requests
+pymysql
+cryptography # O RDS exige isso pra autenticar
