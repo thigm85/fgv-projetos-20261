@@ -1,0 +1,21 @@
+# Copie para terraform.tfvars (não versionar).
+# export TF_VAR_glue_db_password="..."
+
+aws_region   = "us-east-1"
+project_name = "classicmodels-etl"
+
+# Descobre endpoint, porta, subnets e SGs do RDS; cria SG do Glue e abre MySQL.
+rds_instance_identifier = "nome-da-sua-instancia-rds"
+
+rds_database       = "classicmodels"
+glue_db_username   = "glue_readonly"
+create_s3_vpc_endpoint = true
+
+# glue_mysql_jdbc_suffix = "?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&connectTimeout=120000&socketTimeout=120000"
+# glue_mysql_jdbc_suffix = "?useSSL=true&requireSSL=false&allowPublicKeyRetrieval=true&enabledTLSProtocols=TLSv1.2&connectTimeout=120000&socketTimeout=120000"
+
+# Se aparecer ConcurrentRunsExceeded, suba (ex.: 3) ou aguarde runs em STOPPING.
+# glue_max_concurrent_runs = 3
+
+# Se seu usuario AWS nao puder criar IAM Role, informe uma role existente:
+# glue_job_role_arn = "arn:aws:iam::<account-id>:role/LabRole"
