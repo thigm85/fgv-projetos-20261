@@ -1,0 +1,9 @@
+.aws/credentials
+.env
+__pycache__/
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+*.tfvars
+!*.tfvars.example
