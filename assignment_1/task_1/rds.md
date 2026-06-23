@@ -33,6 +33,3 @@ O uso desses scripts ajuda a evitar erros manuais, melhora a rastreabilidade e p
 3. Execute o script de validação para garantir que as tabelas e dados estão corretos.
 
 Você deve ser capaz de executar todas as etapas acima a partir do seu computador local, registrando e utilizando as informações essenciais de acesso ao banco (nome, usuário administrador, senha e endpoint). Nos próximos passos, esse banco será utilizado como sistema de origem para o pipeline de dados.
-
-
-
